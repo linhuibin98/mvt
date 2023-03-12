@@ -1,0 +1,16 @@
+{
+  "name": "vue3",
+  "version": "1.0.0",
+  "description": "mvt demo vue3",
+  "main": "index.js",
+  "scripts": {
+    "dev": "mvt"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.2.47",
+    "mvt": "workspace:*"
+  }
+}
