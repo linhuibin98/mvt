@@ -1,0 +1,27 @@
+{
+  "name": "mvt",
+  "version": "1.0.0",
+  "description": "bundle less",
+  "bin": {
+    "mvt": "./bin/mvt.js"
+  },
+  "main": "src/server.js",
+  "module": "src/server.js",
+  "exports": {
+    ".": "./src/server.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.2.47",
+    "chokidar": "^3.5.3",
+    "serve-handler": "^6.1.5",
+    "slash": "^5.0.0",
+    "ws": "^8.13.0"
+  }
+}
