@@ -12,13 +12,13 @@ socket.addEventListener('message', ({ data }) => {
         case 'reload':
             import(`${path}?t=${Date.now()}`).then(m => {
                 __VUE_HMR_RUNTIME__.reload(path, m.default)
-                console.log(`[mvt][hmr] ${path} reloaded.`)
+                console.log(`[mvt] ${path} reloaded.`)
             })
             break
         case 'rerender':
             import(`${path}?type=template&t=${Date.now()}`).then(m => {
                 __VUE_HMR_RUNTIME__.rerender(path, m.render)
-                console.log(`[mvt][hmr] ${path} template updated.`)
+                console.log(`[mvt] ${path} template updated.`)
             })
             break
         case 'update-style':

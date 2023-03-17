@@ -3,7 +3,7 @@ import path from 'path'
 import chokidar from 'chokidar'
 import slash from 'slash'
 
-import { parseSFC } from './parseSFC.js'
+import { parseSFC } from './parseSFC.mjs'
 
 export function createFileWatcher(notify) {
     const fileWatcher = chokidar.watch(process.cwd(), {
@@ -26,7 +26,7 @@ export function createFileWatcher(notify) {
                 (descriptor.script && descriptor.script.content) !==
                 (prevDescriptor.script && prevDescriptor.script.content)
             ) {
-                console.log(`[hmr] <script> for ${resourcePath} changed. Triggering component reload.`)
+                console.log(`[hmr:reload] <script> for ${resourcePath} changed. Triggering component reload.`)
                 notify({
                     type: 'reload',
                     path: resourcePath
@@ -38,7 +38,7 @@ export function createFileWatcher(notify) {
                 (descriptor.template && descriptor.template.content) !==
                 (prevDescriptor.template && prevDescriptor.template.content)
             ) {
-                console.log(`[hmr] <template> for ${resourcePath} changed. Triggering component re-render.`)
+                console.log(`[hmr:rerender] <template> for ${resourcePath} changed. Triggering component re-render.`)
                 notify({
                     type: 'rerender',
                     path: resourcePath
@@ -48,7 +48,7 @@ export function createFileWatcher(notify) {
 
             // TODO styles
         } else {
-            console.log(`[hmr] script file ${resourcePath} changed. Triggering full page reload.`)
+            console.log(`[hmr:full-reload] script file ${resourcePath} changed. Triggering full page reload.`)
             notify({
                 type: 'full-reload'
             })

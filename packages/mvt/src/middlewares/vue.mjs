@@ -2,17 +2,21 @@ import path from 'path'
 import url from 'url';
 
 import { compileTemplate } from '@vue/compiler-sfc'
-import { sendJS } from '../utils/index.js'
-import { parseSFC } from '../utils/parseSFC.js'
+import { sendJS } from '../utils/index.mjs'
+import { parseSFC } from '../utils/parseSFC.mjs'
 
 export function vueMiddleware(req, res) {
     const parsed = url.parse(req.url, true)
     const query = parsed.query
     const filename = path.join(process.cwd(), parsed.pathname.slice(1))
-    const [descriptor] = parseSFC(filename)
+    const [descriptor] = parseSFC(
+        filename,
+        true /* save last accessed descriptor on the client */
+    )
 
     if (!query.type) {
-        let code = ``
+        // inject hmr client
+        let code = `import "/__hmrClient"\n`
         // TODO use more robust rewrite
         if (descriptor.script) {
             code += descriptor.script.content.replace(
@@ -41,6 +45,7 @@ export function vueMiddleware(req, res) {
             source: descriptor.template.content,
             filename,
             compilerOptions: {
+                // TODO infer proper Vue path
                 runtimeModuleName: '/node_modules/vue/dist/vue.esm-browser.js'
             }
         })

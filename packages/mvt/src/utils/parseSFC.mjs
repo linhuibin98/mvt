@@ -4,11 +4,11 @@ import slash from 'slash'
 
 const cache = new Map()
 
-export function parseSFC(filename) {
+export function parseSFC(filename, saveCache = false) {
     filename = slash(filename)
     const content = fs.readFileSync(filename, 'utf-8')
     const { descriptor, errors } = parse(content, {
-        filename
+        filename,
     })
 
     if (errors) {
@@ -16,7 +16,9 @@ export function parseSFC(filename) {
     }
 
     const prev = cache.get(filename)
-    cache.set(filename, descriptor)
+    if (saveCache) {
+        cache.set(filename, descriptor)
+    }
 
     return [descriptor, prev]
 }

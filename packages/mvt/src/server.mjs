@@ -6,16 +6,16 @@ import url from 'url';
 import serve from 'serve-handler'
 import {WebSocketServer} from 'ws'
 
-import { vueMiddleware } from './middlewares/vue.js'
-import { sendJS } from './utils/index.js'
-import { createFileWatcher } from './utils/fileWatcher.js'
+import { vueMiddleware } from './middlewares/vue.mjs'
+import { sendJS } from './utils/index.mjs'
+import { createFileWatcher } from './utils/hmrWatcher.mjs'
 
-const hmrProxy = fs.readFileSync(path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), './client/hmrProxy.js'), 'utf-8')
+const hmrClientCode = fs.readFileSync(path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), './client/hmrClient.js'), 'utf-8')
 
 const server = http.createServer((req, res) => {
     const pathname = url.parse(req.url).pathname
-    if (pathname === '/__hmrProxy') {
-        sendJS(res, hmrProxy)
+    if (pathname === '/__hmrClient') {
+        sendJS(res, hmrClientCode)
     } else if (pathname.endsWith('.vue')) {
         vueMiddleware(req, res)
     } else {
