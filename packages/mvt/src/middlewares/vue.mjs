@@ -4,6 +4,7 @@ import url from 'url';
 import { compileTemplate } from '@vue/compiler-sfc'
 import { sendJS } from '../utils/index.mjs'
 import { parseSFC } from '../utils/parseSFC.mjs'
+import { rewrite } from '../utils/moduleRewriter.mjs'
 
 export function vueMiddleware(req, res) {
     const parsed = url.parse(req.url, true)
@@ -17,26 +18,24 @@ export function vueMiddleware(req, res) {
     if (!query.type) {
         // inject hmr client
         let code = `import "/__hmrClient"\n`
-        // TODO use more robust rewrite
         if (descriptor.script) {
-            code += descriptor.script.content.replace(
-                `export default`,
-                'const script ='
+            code += rewrite(
+                descriptor.script.content,
+                true /* rewrite default export to `script` */
             )
-            code += `\nexport default script`
         } else {
-            code += `const script = {};\nexport default script;`
+            code += `const __script = {};\nexport default __script;`
         }
         if (descriptor.template) {
-            code += `\nimport { render } from ${JSON.stringify(
+            code += `\nimport { render as __render } from ${JSON.stringify(
                 parsed.pathname + `?type=template${query.t ? `&t=${query.t}` : ``}`
             )}`
-            code += `\nscript.render = render`
+            code += `\n__script.render = __render`
         }
         if (descriptor.style) {
             // TODO
         }
-        code += `\nscript.__hmrId = ${JSON.stringify(parsed.pathname)}`
+        code += `\n__script.__hmrId = ${JSON.stringify(parsed.pathname)}`
         return sendJS(res, code)
     }
 
@@ -46,7 +45,7 @@ export function vueMiddleware(req, res) {
             filename,
             compilerOptions: {
                 // TODO infer proper Vue path
-                runtimeModuleName: '/node_modules/vue/dist/vue.esm-browser.js'
+                runtimeModuleName: '/__modules/vue'
             }
         })
 

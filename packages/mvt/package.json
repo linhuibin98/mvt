@@ -18,8 +18,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/parser": "^7.21.3",
     "@vue/compiler-sfc": "^3.2.47",
     "chokidar": "^3.5.3",
+    "magic-string": "^0.30.0",
     "serve-handler": "^6.1.5",
     "slash": "^5.0.0",
     "ws": "^8.13.0"
