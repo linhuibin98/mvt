@@ -10,11 +10,11 @@ export function createFileWatcher(notify) {
         ignored: [/node_modules/]
     })
 
-    fileWatcher.on('change', (file) => {
+    fileWatcher.on('change', async (file) => {
         file = slash(file)
         const resourcePath = slash(path.join('/', path.relative(process.cwd(), file)))
         if (file.endsWith('.vue')) {
-            const [descriptor, prevDescriptor] = parseSFC(file)
+            const [descriptor, prevDescriptor] = await parseSFC(file)
 
             if (!prevDescriptor) {
                 // 文件还没有被访问过

@@ -1,7 +1,6 @@
 import { parse } from '@babel/parser'
 import ms from 'magic-string'
 
-
 export function rewrite(source, asSFCScript = false) {
     const ast = parse(source, {
         sourceType: 'module',

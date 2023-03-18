@@ -1,12 +1,12 @@
-import fs from 'fs'
+import {promises as fs} from 'fs'
 import { parse } from '@vue/compiler-sfc'
 import slash from 'slash'
 
 const cache = new Map()
 
-export function parseSFC(filename, saveCache = false) {
+export async function parseSFC(filename, saveCache = false) {
     filename = slash(filename)
-    const content = fs.readFileSync(filename, 'utf-8')
+    const content = await fs.readFile(filename, 'utf-8')
     const { descriptor, errors } = parse(content, {
         filename,
     })

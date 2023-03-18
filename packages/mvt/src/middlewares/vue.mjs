@@ -6,11 +6,11 @@ import { sendJS } from '../utils/index.mjs'
 import { parseSFC } from '../utils/parseSFC.mjs'
 import { rewrite } from '../utils/moduleRewriter.mjs'
 
-export function vueMiddleware(req, res) {
+export async function vueMiddleware(req, res) {
     const parsed = url.parse(req.url, true)
     const query = parsed.query
     const filename = path.join(process.cwd(), parsed.pathname.slice(1))
-    const [descriptor] = parseSFC(
+    const [descriptor] = await parseSFC(
         filename,
         true /* save last accessed descriptor on the client */
     )

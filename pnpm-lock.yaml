@@ -11,6 +11,7 @@ importers:
       '@vue/compiler-sfc': ^3.2.47
       chokidar: ^3.5.3
       magic-string: ^0.30.0
+      resolve-cwd: ^3.0.0
       serve-handler: ^6.1.5
       slash: ^5.0.0
       ws: ^8.13.0
@@ -19,6 +20,7 @@ importers:
       '@vue/compiler-sfc': 3.2.47
       chokidar: 3.5.3
       magic-string: 0.30.0
+      resolve-cwd: 3.0.0
       serve-handler: 6.1.5
       slash: 5.0.0
       ws: 8.13.0
@@ -349,6 +351,18 @@ packages:
     engines: {node: '>=8.10.0'}
     dependencies:
       picomatch: 2.3.1
+    dev: false
+
+  /resolve-cwd/3.0.0:
+    resolution: {integrity: sha512-OrZaX2Mb+rJCpH/6CpSqt9xFVpN++x01XnN2ie9g6P5/3xelLAkXWVADpdz1IHD/KFfEXyE6V0U01OQ3UO2rEg==}
+    engines: {node: '>=8'}
+    dependencies:
+      resolve-from: 5.0.0
+    dev: false
+
+  /resolve-from/5.0.0:
+    resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
+    engines: {node: '>=8'}
     dev: false
 
   /serve-handler/6.1.5:
