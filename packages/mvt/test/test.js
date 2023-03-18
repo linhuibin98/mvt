@@ -24,13 +24,18 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-    await browser.close()
-    server.on('exit', async () => {
-        await fs.rm(tempDir, { recursive: true, force: true })
-    })
-    server.kill('SIGTERM', {
-        forceKillAfterTimeout: 2000
-    })
+    if (browser) {
+        await browser.close()
+    }
+
+    if (server) {
+        server.on('exit', async () => {
+            await fs.rm(tempDir, { recursive: true, force: true })
+        })
+        server.kill('SIGTERM', {
+            forceKillAfterTimeout: 2000
+        })
+    }
 })
 
 test('test', async () => {

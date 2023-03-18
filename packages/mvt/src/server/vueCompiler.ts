@@ -2,7 +2,7 @@ import url from 'url'
 import { promises as fs } from 'fs'
 
 import path from 'pathe'
-import { parse, compileTemplate } from '@vue/compiler-sfc'
+import { parse, compileTemplate, SFCDescriptor } from '@vue/compiler-sfc'
 import { sendJS } from './utils'
 import { rewrite } from './moduleRewriter'
 
@@ -10,7 +10,10 @@ import type { ServerResponse, IncomingMessage } from 'http'
 
 const cache = new Map()
 
-export async function parseSFC(filename: string, saveCache = false) {
+export async function parseSFC(
+  filename: string,
+  saveCache = false
+): Promise<[SFCDescriptor, SFCDescriptor | undefined] | []> {
   let content: string
   try {
     content = await fs.readFile(filename, 'utf-8')
@@ -38,8 +41,9 @@ export async function vueMiddleware(
   res: ServerResponse
 ) {
   const parsed = url.parse(req.url!, true)
+  const pathname = parsed.pathname!
   const query = parsed.query
-  const filename = path.join(cwd, parsed.pathname!.slice(1))
+  const filename = path.join(cwd, pathname.slice(1))
   const [descriptor] = await parseSFC(
     filename,
     true /* save last accessed descriptor on the client */
@@ -51,44 +55,11 @@ export async function vueMiddleware(
   }
 
   if (!query.type) {
-    // inject hmr client
-    let code = `import "/__hmrClient"\n`
-    if (descriptor.script) {
-      code += rewrite(
-        descriptor.script.content,
-        true /* rewrite default export to `script` */
-      )
-    } else {
-      code += `const __script = {};\nexport default __script;`
-    }
-    if (descriptor.template) {
-      code += `\nimport { render as __render } from ${JSON.stringify(
-        parsed.pathname + `?type=template${query.t ? `&t=${query.t}` : ``}`
-      )}`
-      code += `\n__script.render = __render`
-    }
-    if (descriptor.style) {
-      // TODO
-    }
-    code += `\n__script.__hmrId = ${JSON.stringify(parsed.pathname)}`
-    return sendJS(res, code)
+    return compileSFCMain(res, descriptor, pathname, query.t as string)
   }
 
   if (query.type === 'template') {
-    const { code, errors } = compileTemplate({
-      id: '6666666',
-      source: descriptor.template.content,
-      filename,
-      compilerOptions: {
-        // TODO infer proper Vue path
-        runtimeModuleName: '/__modules/vue'
-      }
-    })
-
-    if (errors) {
-      // TODO
-    }
-    return sendJS(res, code)
+    return compileSFCTemplate(res, descriptor, filename)
   }
 
   if (query.type === 'style') {
@@ -97,6 +68,47 @@ export async function vueMiddleware(
   }
 
   // TODO custom blocks
+}
+
+function compileSFCMain(res: ServerResponse, descriptor: SFCDescriptor, pathname: string, timestamp: string | undefined) {
+  // inject hmr client
+  let code = `import "/__hmrClient"\n`
+  if (descriptor.script) {
+    code += rewrite(
+      descriptor.script.content,
+      true /* rewrite default export to `script` */
+    )
+  } else {
+    code += `const __script = {};\nexport default __script;`
+  }
+  if (descriptor.template) {
+    code += `\nimport { render as __render } from ${JSON.stringify(
+      pathname + `?type=template${timestamp ? `&t=${timestamp}` : ``}`
+    )}`
+    code += `\n__script.render = __render`
+  }
+  if (descriptor.styles) {
+    // TODO
+  }
+  code += `\n__script.__hmrId = ${JSON.stringify(pathname)}`
+  return sendJS(res, code)
+}
+
+function compileSFCTemplate(res: ServerResponse, descriptor: SFCDescriptor, filename: string) {
+  const { code, errors } = compileTemplate({
+    id: '6666666',
+    source: descriptor.template!.content,
+    filename,
+    compilerOptions: {
+      // TODO infer proper Vue path
+      runtimeModuleName: '/__modules/vue'
+    }
+  })
+
+  if (errors) {
+    // TODO
+  }
+  return sendJS(res, code)
 }
 
 export default vueMiddleware
