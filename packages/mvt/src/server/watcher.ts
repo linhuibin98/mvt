@@ -2,7 +2,7 @@ import path from 'pathe'
 
 import chokidar from 'chokidar'
 
-import { parseSFC } from './parseSFC'
+import { parseSFC } from './vueCompiler'
 
 export interface ServerNotification {
   type: string
@@ -10,15 +10,16 @@ export interface ServerNotification {
 }
 
 export function createFileWatcher(
+  cwd: string,
   notify: (payload: ServerNotification) => void
 ) {
-  const fileWatcher = chokidar.watch(process.cwd(), {
+  const fileWatcher = chokidar.watch(cwd, {
     ignored: [/node_modules/]
   })
 
   fileWatcher.on('change', async (file) => {
     file = path.normalize(file)
-    const resourcePath = path.join('/', path.relative(process.cwd(), file))
+    const resourcePath = path.join('/', path.relative(cwd, file))
     if (file.endsWith('.vue')) {
       const [descriptor, prevDescriptor] = await parseSFC(file)
 

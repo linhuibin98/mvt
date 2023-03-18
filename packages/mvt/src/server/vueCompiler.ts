@@ -1,21 +1,54 @@
-import path from 'pathe'
 import url from 'url'
+import { promises as fs } from 'fs'
 
-import { compileTemplate } from '@vue/compiler-sfc'
-import { sendJS } from '../utils/index'
-import { parseSFC } from '../utils/parseSFC'
-import { rewrite } from '../utils/moduleRewriter'
+import path from 'pathe'
+import { parse, compileTemplate } from '@vue/compiler-sfc'
+import { sendJS } from './utils'
+import { rewrite } from './moduleRewriter'
 
 import type { ServerResponse, IncomingMessage } from 'http'
 
-export async function vueMiddleware(req: IncomingMessage, res: ServerResponse) {
+const cache = new Map()
+
+export async function parseSFC(filename: string, saveCache = false) {
+  let content: string
+  try {
+    content = await fs.readFile(filename, 'utf-8')
+  } catch (e) {
+    return []
+  }
+  const { descriptor, errors } = parse(content, {
+    filename
+  })
+
+  if (errors) {
+    // TODO
+  }
+
+  const prev = cache.get(filename)
+  if (saveCache) {
+    cache.set(filename, descriptor)
+  }
+  return [descriptor, prev]
+}
+
+export async function vueMiddleware(
+  cwd: string,
+  req: IncomingMessage,
+  res: ServerResponse
+) {
   const parsed = url.parse(req.url!, true)
   const query = parsed.query
-  const filename = path.join(process.cwd(), parsed.pathname!.slice(1))
+  const filename = path.join(cwd, parsed.pathname!.slice(1))
   const [descriptor] = await parseSFC(
     filename,
     true /* save last accessed descriptor on the client */
   )
+
+  if (!descriptor) {
+    res.statusCode = 404
+    return res.end()
+  }
 
   if (!query.type) {
     // inject hmr client
