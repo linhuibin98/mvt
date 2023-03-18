@@ -11,11 +11,11 @@ export function moduleMiddleware(id: string, res: ServerResponse) {
   // fallback to node resolve
   try {
     modulePath = resolve(id)
-    // TODO
+    // TODO use project vue 
     if (id === 'vue') {
       modulePath = path.join(
-        process.cwd(),
-        'node_modules/vue/dist/vue.esm-browser.js'
+        __dirname,
+        '../../../node_modules/vue/dist/vue.esm-browser.js'
       )
     }
   } catch (e) {

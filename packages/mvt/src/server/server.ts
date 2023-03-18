@@ -8,16 +8,20 @@ import { WebSocketServer, WebSocket } from 'ws'
 
 import { vueMiddleware } from './middlewares/vue'
 import { moduleMiddleware } from './middlewares/module'
-
 import { sendJS } from './utils/index'
 import { createFileWatcher } from './utils/hmrWatcher'
 import { rewrite } from './utils/moduleRewriter'
 
+import type { Server } from 'http'
+
 export interface ServerConfig {
   port?: number
+  cwd?: string
 }
 
-export async function createServer({ port = 3000 }: ServerConfig = {}) {
+export async function createServer({
+  port = 3000
+}: ServerConfig = {}): Promise<Server> {
   const hmrClientCode = await fs.readFile(
     path.resolve(__dirname, '../client/client.js'),
     'utf-8'
