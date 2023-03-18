@@ -2,7 +2,15 @@ import url from 'url'
 import { promises as fs } from 'fs'
 
 import path from 'pathe'
-import { parse, compileTemplate, SFCDescriptor } from '@vue/compiler-sfc'
+import {
+  parse,
+  compileTemplate,
+  SFCDescriptor,
+  compileStyle,
+  SFCStyleBlock,
+  SFCTemplateBlock
+} from '@vue/compiler-sfc'
+import hash from 'hash-sum'
 import { sendJS } from './utils'
 import { rewrite } from './moduleRewriter'
 
@@ -59,18 +67,35 @@ export async function vueMiddleware(
   }
 
   if (query.type === 'template') {
-    return compileSFCTemplate(res, descriptor, filename)
+    return compileSFCTemplate(
+      res,
+      descriptor.template!,
+      filename,
+      pathname,
+      descriptor.styles.some((s) => s.scoped)
+    )
   }
 
   if (query.type === 'style') {
-    // TODO
-    return
+    return compileSFCStyle(
+      res,
+      descriptor.styles[Number(query.index)],
+      query.index as string,
+      filename,
+      pathname
+    )
   }
 
   // TODO custom blocks
 }
 
-function compileSFCMain(res: ServerResponse, descriptor: SFCDescriptor, pathname: string, timestamp: string | undefined) {
+function compileSFCMain(
+  res: ServerResponse,
+  descriptor: SFCDescriptor,
+  pathname: string,
+  timestamp: string | undefined
+) {
+  timestamp = timestamp ? `&t=${timestamp}` : ``
   // inject hmr client
   let code = `import "/__hmrClient"\n`
   if (descriptor.script) {
@@ -81,9 +106,23 @@ function compileSFCMain(res: ServerResponse, descriptor: SFCDescriptor, pathname
   } else {
     code += `const __script = {};\nexport default __script;`
   }
+
+  let hasScoped = false
+  if (descriptor.styles) {
+    descriptor.styles.forEach((s, i) => {
+      if (s.scoped) hasScoped = true
+      code += `\nimport ${JSON.stringify(
+        pathname + `?type=style&index=${i}${timestamp}`
+      )}`
+    })
+    if (hasScoped) {
+      code += `\n__script.__scopeId = "data-v-${hash(pathname)}"`
+    }
+  }
+
   if (descriptor.template) {
     code += `\nimport { render as __render } from ${JSON.stringify(
-      pathname + `?type=template${timestamp ? `&t=${timestamp}` : ``}`
+      pathname + `?type=template${timestamp}`
     )}`
     code += `\n__script.render = __render`
   }
@@ -94,14 +133,21 @@ function compileSFCMain(res: ServerResponse, descriptor: SFCDescriptor, pathname
   return sendJS(res, code)
 }
 
-function compileSFCTemplate(res: ServerResponse, descriptor: SFCDescriptor, filename: string) {
+function compileSFCTemplate(
+  res: ServerResponse,
+  template: SFCTemplateBlock,
+  filename: string,
+  pathname: string,
+  scoped: boolean
+) {
   const { code, errors } = compileTemplate({
+    // TODO
     id: '6666666',
-    source: descriptor.template!.content,
+    source: template.content,
     filename,
     compilerOptions: {
-      // TODO infer proper Vue path
-      runtimeModuleName: '/__modules/vue'
+      runtimeModuleName: '/__modules/vue',
+      scopeId: scoped ? `data-v-${hash(pathname)}` : null
     }
   })
 
@@ -109,6 +155,42 @@ function compileSFCTemplate(res: ServerResponse, descriptor: SFCDescriptor, file
     // TODO
   }
   return sendJS(res, code)
+}
+
+function compileSFCStyle(
+  res: ServerResponse,
+  style: SFCStyleBlock,
+  index: string,
+  filename: string,
+  pathname: string
+) {
+  const id = hash(pathname)
+  const { code, errors } = compileStyle({
+    source: style.content,
+    filename,
+    id: `data-v-${id}`,
+    scoped: style.scoped != null
+  })
+
+  // TODO css modules
+
+  if (errors) {
+    // TODO
+  }
+
+  sendJS(
+    res,
+    `
+  const id = "vue-style-${id}-${index}"
+  let style = document.getElementById(id)
+  if (!style) {
+    style = document.createElement('style')
+    style.id = id
+    document.head.appendChild(style)
+  }
+  style.textContent = ${JSON.stringify(code)}
+`.trim()
+  )
 }
 
 export default vueMiddleware

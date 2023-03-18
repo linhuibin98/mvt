@@ -15,3 +15,10 @@ export default {
     }
 }
 </script>
+
+<style>
+#app {
+    color: green;
+    font-size: 34px;
+}
+</style>

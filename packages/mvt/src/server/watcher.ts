@@ -1,12 +1,16 @@
 import path from 'pathe'
-
+import hash from 'hash-sum'
 import chokidar from 'chokidar'
 
 import { parseSFC } from './vueCompiler'
 
+import type { SFCBlock } from '@vue/compiler-sfc'
+
 export interface ServerNotification {
   type: string
   path?: string
+  index?: number
+  id?: string
 }
 
 export function createFileWatcher(
@@ -20,6 +24,12 @@ export function createFileWatcher(
   fileWatcher.on('change', async (file) => {
     file = path.normalize(file)
     const resourcePath = path.join('/', path.relative(cwd, file))
+
+    const send = (payload: ServerNotification) => {
+      console.log(`[hmr] ${JSON.stringify(payload)}`)
+      notify(payload)
+    }
+
     if (file.endsWith('.vue')) {
       const [descriptor, prevDescriptor] = await parseSFC(file)
 
@@ -29,42 +39,67 @@ export function createFileWatcher(
         return
       }
 
-      if (
-        (descriptor.script && descriptor.script.content) !==
-        (prevDescriptor.script && prevDescriptor.script.content)
-      ) {
-        console.log(
-          `[hmr:reload] <script> for ${resourcePath} changed. Triggering component reload.`
-        )
-        notify({
+      if (!isEqual(descriptor.script, prevDescriptor.script)) {
+        send({
           type: 'reload',
           path: resourcePath
         })
         return
       }
 
-      if (
-        (descriptor.template && descriptor.template.content) !==
-        (prevDescriptor.template && prevDescriptor.template.content)
-      ) {
-        console.log(
-          `[hmr:rerender] <template> for ${resourcePath} changed. Triggering component re-render.`
-        )
-        notify({
+      if (!isEqual(descriptor.template, prevDescriptor.template)) {
+        send({
           type: 'rerender',
           path: resourcePath
         })
         return
       }
 
-      // TODO styles
+      const prevStyles = prevDescriptor.styles || []
+      const nextStyles = descriptor.styles || []
+      
+      if (
+        prevStyles.some((s) => s.scoped) !== nextStyles.some((s) => s.scoped)
+      ) {
+        send({
+          type: 'reload',
+          path: resourcePath
+        })
+      }
+
+      nextStyles.forEach((_, i) => {
+        if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
+          send({
+            type: 'style-update',
+            path: resourcePath,
+            index: i
+          })
+        }
+      })
+
+      prevStyles.slice(nextStyles.length).forEach((_, i) => {
+        send({
+          type: 'style-remove',
+          path: resourcePath,
+          id: `${hash(resourcePath)}-${i + nextStyles.length}`
+        })
+      })
+
     } else {
-      console.log(
-        `[hmr:full-reload] script file ${resourcePath} changed. Triggering full page reload.`
-      )
-      notify({
+      send({
         type: 'full-reload'
       })
     }
   })
+}
+
+function isEqual(a: SFCBlock | null, b: SFCBlock | null) {
+  if (!a || !b) return false
+  if (a.content !== b.content) return false
+  const keysA = Object.keys(a.attrs)
+  const keysB = Object.keys(b.attrs)
+  if (keysA.length !== keysB.length) {
+    return false
+  }
+  return keysA.every((key) => a.attrs[key] === b.attrs[key])
 }
