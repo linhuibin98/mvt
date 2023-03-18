@@ -1,30 +1,57 @@
 {
   "name": "mvt",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "bundle less",
+  "keywords": [
+    "nobundle dev"
+  ],
+  "author": "linhuibin98 <1032352370@qq.com>",
   "bin": {
-    "mvt": "./bin/mvt.mjs"
+    "mvt": "bin/mvt.js"
   },
-  "main": "src/server.mjs",
-  "module": "src/server.mjs",
-  "exports": {
-    ".": "./src/server.mjs"
-  },
-  "type": "module",
+  "main": "dist/server/index.js",
+  "types": "dist/server/index.d.ts",
   "scripts": {
-    "start": "node src/server.mjs"
+    "dev": "run-p dev-client dev-server",
+    "dev-client": "tsc -w --p src/client",
+    "dev-server": "tsc -w --p src/server",
+    "build": "tsc -p src/client && tsc -p src/server",
+    "lint": "prettier --write --parser typescript \"src/**/*.ts\"",
+    "prepublishOnly": "tsc"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.ts": [
+      "prettier --parser=typescript --write",
+      "git add"
+    ]
+  },
   "dependencies": {
     "@babel/parser": "^7.21.3",
     "@vue/compiler-sfc": "^3.2.47",
     "chokidar": "^3.5.3",
     "magic-string": "^0.30.0",
+    "pathe": "^1.1.0",
     "resolve-cwd": "^3.0.0",
     "serve-handler": "^6.1.5",
-    "slash": "^5.0.0",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.16",
+    "@types/serve-handler": "^6.1.1",
+    "@types/ws": "^8.5.4",
+    "lint-staged": "^13.2.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.8.4",
+    "typescript": "^5.0.2",
+    "vue": "^3.2.47",
+    "yorkie": "^2.0.0"
   }
 }
