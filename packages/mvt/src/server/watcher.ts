@@ -31,7 +31,7 @@ export function createFileWatcher(
     }
 
     if (file.endsWith('.vue')) {
-      const [descriptor, prevDescriptor] = await parseSFC(file)
+      const [descriptor, prevDescriptor] = await parseSFC(cwd, file)
 
       if (!descriptor || !prevDescriptor) {
         // 文件还没有被访问过
