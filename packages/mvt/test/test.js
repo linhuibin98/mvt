@@ -50,7 +50,9 @@ test('test', async () => {
         })
     })
 
-    browser = await puppeteer.launch()
+    browser = await puppeteer.launch(
+        process.env.CI ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] } : {}
+    )
 
     const page = await browser.newPage()
     await page.goto('http://localhost:3000')
@@ -82,4 +84,7 @@ test('test', async () => {
             await timeout(200)
         }
     }
+
+    // TODO test style HMR
+    // TODO test node_modules resolution
 })

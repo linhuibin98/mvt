@@ -141,8 +141,7 @@ function compileSFCTemplate(
   scoped: boolean
 ) {
   const { code, errors } = compileTemplate({
-    // TODO
-    id: '6666666',
+    id: `data-v-${hash(pathname)}`,
     source: template.content,
     filename,
     compilerOptions: {
