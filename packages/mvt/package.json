@@ -46,16 +46,20 @@
     "@vue/compiler-sfc": "^3.2.47",
     "chokidar": "^3.5.3",
     "hash-sum": "^2.0.0",
+    "koa": "^2.14.1",
+    "koa-static": "^5.0.0",
+    "koa2-history-api-fallback": "^0.1.0",
     "magic-string": "^0.30.0",
     "minimist": "^1.2.8",
     "pathe": "^1.1.0",
     "resolve-from": "^5.0.0",
     "serve-handler": "^6.1.5",
-    "ws": "^8.13.0",
-    "vue": "^3.2.47"
+    "vue": "^3.2.47",
+    "ws": "^8.13.0"
   },
   "devDependencies": {
     "@types/hash-sum": "^1.0.0",
+    "@types/koa": "^2.13.5",
     "@types/node": "^16.18.16",
     "@types/serve-handler": "^6.1.1",
     "@types/ws": "^8.5.4",

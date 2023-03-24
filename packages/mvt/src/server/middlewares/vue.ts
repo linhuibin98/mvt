@@ -1,20 +1,71 @@
-import url from 'url'
-import { promises as fs } from 'fs'
-
 import path from 'pathe'
+import { promises as fs } from 'fs'
 import {
   SFCDescriptor,
-  SFCStyleBlock,
-  SFCTemplateBlock
+  SFCTemplateBlock,
+  SFCStyleBlock
 } from '@vue/compiler-sfc'
+import { resolveCompiler } from '../vueResolver'
 import hash from 'hash-sum'
-import { sendJS } from './utils'
-import { rewrite } from './moduleRewriter'
-import { resolveCompiler } from './moduleResolver'
+import { rewrite } from '../moduleRewriter'
 
-import type { ServerResponse, IncomingMessage } from 'http'
+import type { Middleware } from '../index'
 
-const cache = new Map()
+export const vueMiddleware: Middleware = ({ cwd, app }) => {
+  app.use(async (ctx, next) => {
+    if (!ctx.path.endsWith('.vue')) {
+      return next()
+    }
+
+    const pathname = ctx.path
+    const query = ctx.query
+    const filename = path.join(cwd, pathname.slice(1))
+    const [descriptor] = await parseSFC(
+      cwd,
+      filename,
+      true /* save last accessed descriptor on the client */
+    )
+
+    if (!descriptor) {
+      ctx.status = 404
+      return
+    }
+
+    ctx.type = 'js'
+
+    if (!query.type) {
+      ctx.body = compileSFCMain(descriptor, pathname, query.t as string)
+      return
+    }
+
+    if (query.type === 'template') {
+      ctx.body = compileSFCTemplate(
+        cwd,
+        descriptor.template!,
+        filename,
+        pathname,
+        descriptor.styles.some((s) => s.scoped)
+      )
+      return
+    }
+
+    if (query.type === 'style') {
+      ctx.body = compileSFCStyle(
+        cwd,
+        descriptor.styles[Number(query.index)],
+        query.index as string,
+        filename,
+        pathname
+      )
+      return
+    }
+
+    // TODO custom blocks
+
+  })
+}
+
+const pageCache = new Map()
 
 export async function parseSFC(
   cwd: string,
@@ -35,68 +86,18 @@ export async function parseSFC(
     // TODO
   }
 
-  const prev = cache.get(filename)
+  const prev = pageCache.get(filename)
   if (saveCache) {
-    cache.set(filename, descriptor)
+    pageCache.set(filename, descriptor)
   }
   return [descriptor, prev]
 }
 
-export async function vueMiddleware(
-  cwd: string,
-  req: IncomingMessage,
-  res: ServerResponse
-) {
-  const parsed = url.parse(req.url!, true)
-  const pathname = parsed.pathname!
-  const query = parsed.query
-  const filename = path.join(cwd, pathname.slice(1))
-  const [descriptor] = await parseSFC(
-    cwd,
-    filename,
-    true /* save last accessed descriptor on the client */
-  )
-
-  if (!descriptor) {
-    res.statusCode = 404
-    return res.end()
-  }
-
-  if (!query.type) {
-    return compileSFCMain(res, descriptor, pathname, query.t as string)
-  }
-
-  if (query.type === 'template') {
-    return compileSFCTemplate(
-      cwd,
-      res,
-      descriptor.template!,
-      filename,
-      pathname,
-      descriptor.styles.some((s) => s.scoped)
-    )
-  }
-
-  if (query.type === 'style') {
-    return compileSFCStyle(
-      cwd,
-      res,
-      descriptor.styles[Number(query.index)],
-      query.index as string,
-      filename,
-      pathname
-    )
-  }
-
-  // TODO custom blocks
-}
-
 function compileSFCMain(
-  res: ServerResponse,
   descriptor: SFCDescriptor,
   pathname: string,
   timestamp: string | undefined
-) {
+): string {
   timestamp = timestamp ? `&t=${timestamp}` : ``
   // inject hmr client
   let code = `import "/__hmrClient"\n`
@@ -132,17 +133,16 @@ function compileSFCMain(
     // TODO
   }
   code += `\n__script.__hmrId = ${JSON.stringify(pathname)}`
-  return sendJS(res, code)
+  return code
 }
 
 function compileSFCTemplate(
   cwd: string,
-  res: ServerResponse,
   template: SFCTemplateBlock,
   filename: string,
   pathname: string,
   scoped: boolean
-) {
+): string {
   const { code, errors } = resolveCompiler(cwd).compileTemplate({
     id: `data-v-${hash(pathname)}`,
     source: template.content,
@@ -156,17 +156,16 @@ function compileSFCTemplate(
   if (errors) {
     // TODO
   }
-  return sendJS(res, code)
+  return code
 }
 
 function compileSFCStyle(
   cwd: string,
-  res: ServerResponse,
   style: SFCStyleBlock,
   index: string,
   filename: string,
   pathname: string
-) {
+): string {
   const id = hash(pathname)
   const { code, errors } = resolveCompiler(cwd).compileStyle({
     source: style.content,
@@ -181,19 +180,16 @@ function compileSFCStyle(
     // TODO
   }
 
-  sendJS(
-    res,
-    `
-  const id = "vue-style-${id}-${index}"
-  let style = document.getElementById(id)
-  if (!style) {
-    style = document.createElement('style')
-    style.id = id
-    document.head.appendChild(style)
-  }
-  style.textContent = ${JSON.stringify(code)}
-`.trim()
-  )
+  return `
+    const id = "vue-style-${id}-${index}"
+    let style = document.getElementById(id)
+    if (!style) {
+      style = document.createElement('style')
+      style.id = id
+      document.head.appendChild(style)
+    }
+    style.textContent = ${JSON.stringify(code)}
+  `.trim()
 }
 
 export default vueMiddleware
