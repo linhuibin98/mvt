@@ -10,15 +10,11 @@ Create the following files:
 
 ```html
 <div id="app"></div>
-<script type="module" src="/main.js"></script>
-```
-
-**main.js**
-
-```js
-import { createApp } from 'vue'
-import Comp from './Comp.vue'
-createApp(Comp).mount('#app')
+<script type="module">
+  import { createApp } from 'vue'
+  import Comp from './Comp.vue'
+  createApp(Comp).mount('#app')
+</script>
 ```
 
 **Comp.vue**
