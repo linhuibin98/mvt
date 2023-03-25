@@ -1,5 +1,6 @@
 import http, { Server } from 'http'
 import Koa from 'koa'
+import https from 'https'
 
 import { hmrMiddleware } from './middlewares/hmr'
 import { moduleResolverMiddleware } from './middlewares/modules'
@@ -16,8 +17,8 @@ export interface MiddlewareCtx {
 export type Middleware = (ctx: MiddlewareCtx) => void
 
 export interface ServerConfig {
-  port?: number
   cwd?: string
+  https?: boolean
   middlewares?: Middleware[]
 }
 
@@ -29,13 +30,13 @@ const middlewares: Middleware[] = [
   serveMiddleware
 ]
 
-export async function createServer({
-  port = 3000,
+export function createServer({
   cwd = process.cwd(),
-  middlewares: userMiddlewares = []
-}: ServerConfig = {}): Promise<Server> {
+  middlewares: userMiddlewares = [],
+  https: useHttps = false
+}: ServerConfig = {}): Server {
   const app = new Koa()
-  const server = http.createServer(app.callback())
+  const server = useHttps ? https.createServer(app.callback()) : http.createServer(app.callback())
 
   ;[...userMiddlewares, ...middlewares].forEach((m) =>
     m({
@@ -45,25 +46,5 @@ export async function createServer({
     })
   )
 
-  return new Promise((resolve, reject) => {
-    server.on('error', (e: Error & { code: string }) => {
-      if (e.code === 'EADDRINUSE') {
-        console.log(`port ${port} is in use, trying another one...`)
-        setTimeout(() => {
-          server.close()
-          server.listen(++port)
-        }, 100)
-      } else {
-        console.error(e)
-        reject(e)
-      }
-    })
-
-    server.on('listening', () => {
-      console.log(`Running at http://localhost:${port}`)
-      resolve(server)
-    })
-
-    server.listen(port)
-  })
+  return server
 }

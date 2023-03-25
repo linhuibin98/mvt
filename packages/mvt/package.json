@@ -20,7 +20,7 @@
     "dev": "run-p dev-client dev-server",
     "dev-client": "tsc -w --p src/client",
     "dev-server": "tsc -w --p src/server",
-    "build": "tsc -p src/client && tsc -p src/server",
+    "build": "rimraf dist && tsc -p src/client && tsc -p src/server",
     "lint": "prettier --write --parser typescript \"src/**/*.ts\"",
     "test": "npm run build && jest",
     "prepublishOnly": "npm run build"
@@ -68,6 +68,7 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.4",
     "puppeteer": "19.2",
+    "rimraf": "^4.4.1",
     "typescript": "^5.0.2",
     "yorkie": "^2.0.0"
   }
