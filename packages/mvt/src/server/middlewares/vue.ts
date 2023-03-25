@@ -5,12 +5,14 @@ import {
   SFCTemplateBlock,
   SFCStyleBlock
 } from '@vue/compiler-sfc'
-import { resolveCompiler } from '../vueResolver'
+import { resolveCompiler } from '../resolveVue'
 import hash from 'hash-sum'
-import { rewrite } from '../moduleRewriter'
 
 import type { Middleware } from '../index'
 
+// Resolve the correct `vue` and `@vue.compiler-sfc` to use.
+// If the user project has local installations of these, they should be used;
+// otherwise, fallback to the dependency of Vite itself.
 export const vueMiddleware: Middleware = ({ cwd, app }) => {
   app.use(async (ctx, next) => {
     if (!ctx.path.endsWith('.vue')) {
@@ -102,14 +104,12 @@ function compileSFCMain(
   // inject hmr client
   let code = `import "/__hmrClient"\n`
   if (descriptor.script) {
-    code += rewrite(
-      descriptor.script.content,
-      true /* rewrite default export to `script` */
-    )
+    code += descriptor.script.content
   } else {
-    code += `const __script = {};\nexport default __script;`
+    code += `export default {}`
   }
-
+  // The module rewriter will rewrite `export default {}` to
+  // `let __script; export default (__script = {})
   let hasScoped = false
   if (descriptor.styles) {
     descriptor.styles.forEach((s, i) => {
@@ -129,9 +129,7 @@ function compileSFCMain(
     )}`
     code += `\n__script.render = __render`
   }
-  if (descriptor.styles) {
-    // TODO
-  }
+
   code += `\n__script.__hmrId = ${JSON.stringify(pathname)}`
   return code
 }
