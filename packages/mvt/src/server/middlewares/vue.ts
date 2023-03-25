@@ -12,8 +12,8 @@ import type { Middleware } from '../index'
 
 // Resolve the correct `vue` and `@vue.compiler-sfc` to use.
 // If the user project has local installations of these, they should be used;
-// otherwise, fallback to the dependency of Vite itself.
-export const vueMiddleware: Middleware = ({ cwd, app }) => {
+// otherwise, fallback to the dependency of mvt itself.
+export const vueMiddleware: Middleware = ({ root, app }) => {
   app.use(async (ctx, next) => {
     if (!ctx.path.endsWith('.vue')) {
       return next()
@@ -21,9 +21,9 @@ export const vueMiddleware: Middleware = ({ cwd, app }) => {
 
     const pathname = ctx.path
     const query = ctx.query
-    const filename = path.join(cwd, pathname.slice(1))
+    const filename = path.join(root, pathname.slice(1))
     const [descriptor] = await parseSFC(
-      cwd,
+      root,
       filename,
       true /* save last accessed descriptor on the client */
     )
@@ -42,7 +42,7 @@ export const vueMiddleware: Middleware = ({ cwd, app }) => {
 
     if (query.type === 'template') {
       ctx.body = compileSFCTemplate(
-        cwd,
+        root,
         descriptor.template!,
         filename,
         pathname,
@@ -53,7 +53,7 @@ export const vueMiddleware: Middleware = ({ cwd, app }) => {
 
     if (query.type === 'style') {
       ctx.body = compileSFCStyle(
-        cwd,
+        root,
         descriptor.styles[Number(query.index)],
         query.index as string,
         filename,
@@ -70,7 +70,7 @@ export const vueMiddleware: Middleware = ({ cwd, app }) => {
 const pageCache = new Map()
 
 export async function parseSFC(
-  cwd: string,
+  root: string,
   filename: string,
   saveCache = false
 ): Promise<[SFCDescriptor, SFCDescriptor | undefined] | []> {
@@ -80,7 +80,7 @@ export async function parseSFC(
   } catch (e) {
     return []
   }
-  const { descriptor, errors } = resolveCompiler(cwd).parse(content, {
+  const { descriptor, errors } = resolveCompiler(root).parse(content, {
     filename
   })
 
@@ -135,13 +135,13 @@ function compileSFCMain(
 }
 
 function compileSFCTemplate(
-  cwd: string,
+  root: string,
   template: SFCTemplateBlock,
   filename: string,
   pathname: string,
   scoped: boolean
 ): string {
-  const { code, errors } = resolveCompiler(cwd).compileTemplate({
+  const { code, errors } = resolveCompiler(root).compileTemplate({
     id: `data-v-${hash(pathname)}`,
     source: template.content,
     filename,
@@ -158,14 +158,14 @@ function compileSFCTemplate(
 }
 
 function compileSFCStyle(
-  cwd: string,
+  root: string,
   style: SFCStyleBlock,
   index: string,
   filename: string,
   pathname: string
 ): string {
   const id = hash(pathname)
-  const { code, errors } = resolveCompiler(cwd).compileStyle({
+  const { code, errors } = resolveCompiler(root).compileStyle({
     source: style.content,
     filename,
     id: `data-v-${id}`,

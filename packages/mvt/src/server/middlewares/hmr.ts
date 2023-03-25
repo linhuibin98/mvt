@@ -17,7 +17,7 @@ export interface HMRPayload {
 
 const hmrClientPath = path.resolve(__dirname, '../../client/client.js')
 
-export const hmrMiddleware: Middleware = ({ cwd, app, server }) => {
+export const hmrMiddleware: Middleware = ({ root, app, server }) => {
   app.use((ctx, next) => {
     if (ctx.path !== '/__hmrClient') {
       return next()
@@ -47,19 +47,19 @@ export const hmrMiddleware: Middleware = ({ cwd, app, server }) => {
   const notify = (payload: HMRPayload) =>
     sockets.forEach((s) => s.send(JSON.stringify(payload)))
 
-    const watcher = chokidar.watch(cwd, {
+    const watcher = chokidar.watch(root, {
       ignored: [/node_modules/]
     })
 
     watcher.on('change', async (file) => {
       file = path.normalize(file)
-      const resourcePath = '/' + path.relative(cwd, file)
+      const resourcePath = '/' + path.relative(root, file)
       const send = (payload: HMRPayload) => {
         console.log(`[hmr] ${JSON.stringify(payload)}`)
         notify(payload)
       }
       if (file.endsWith('.vue')) {
-        const [descriptor, prevDescriptor] = await parseSFC(cwd, file)
+        const [descriptor, prevDescriptor] = await parseSFC(root, file)
   
         if (!descriptor || !prevDescriptor) {
           // 文件还没有被访问过

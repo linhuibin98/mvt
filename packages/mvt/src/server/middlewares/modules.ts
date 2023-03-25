@@ -11,7 +11,7 @@ import type { Middleware } from '../index'
 const idToFileMap = new Map()
 const fileToIdMap = new Map()
 
-export const moduleResolverMiddleware: Middleware = ({ cwd, app }) => {
+export const moduleResolverMiddleware: Middleware = ({ root, app }) => {
   // rewrite named module imports to `/__modules/:id` requests
   app.use(async (ctx, next) => {
     await next()
@@ -57,7 +57,7 @@ export const moduleResolverMiddleware: Middleware = ({ cwd, app }) => {
 
     // special handling for vue's runtime.
     if (id === 'vue') {
-      ctx.body = createReadStream(resolveVue(cwd).vue)
+      ctx.body = createReadStream(resolveVue(root).vue)
       return
     }
 
@@ -76,7 +76,7 @@ export const moduleResolverMiddleware: Middleware = ({ cwd, app }) => {
       const moduleId = fileToIdMap.get(jsRequest)
       if (!moduleId) {
         console.error(
-          `[vite] failed to infer original js file for source map request ` +
+          `[mvt] failed to infer original js file for source map request ` +
             sourceMapRequest
         )
         ctx.status = 404
@@ -98,7 +98,7 @@ export const moduleResolverMiddleware: Middleware = ({ cwd, app }) => {
 
     // resolve from node_modules
     try {
-      const pkgPath = resolve(cwd, `${id}/package.json`)
+      const pkgPath = resolve(root, `${id}/package.json`)
       const pkg = require(pkgPath)
       const modulePath = path.join(
         path.dirname(pkgPath),
