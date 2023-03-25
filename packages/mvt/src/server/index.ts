@@ -4,6 +4,7 @@ import Koa from 'koa'
 import { hmrMiddleware } from './middlewares/hmr'
 import { moduleResolverMiddleware } from './middlewares/modules'
 import { vueMiddleware } from './middlewares/vue'
+import { historyFallbackMiddleware } from './middlewares/historyFallback'
 import { serveMiddleware } from './middlewares/serve'
 
 export interface MiddlewareCtx {
@@ -24,6 +25,7 @@ const middlewares: Middleware[] = [
   hmrMiddleware,
   moduleResolverMiddleware,
   vueMiddleware,
+  historyFallbackMiddleware,
   serveMiddleware
 ]
 
