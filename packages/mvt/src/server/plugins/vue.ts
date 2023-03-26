@@ -1,5 +1,4 @@
 import path from 'pathe'
-import { promises as fs } from 'fs'
 import {
   SFCDescriptor,
   SFCTemplateBlock,
@@ -7,6 +6,7 @@ import {
 } from '@vue/compiler-sfc'
 import { resolveCompiler } from '../resolveVue'
 import hash from 'hash-sum'
+import { cachedRead } from '../utils'
 
 import type { Plugin } from '../index'
 
@@ -76,7 +76,7 @@ export async function parseSFC(
 ): Promise<[SFCDescriptor, SFCDescriptor | undefined] | []> {
   let content: string
   try {
-    content = await fs.readFile(filename, 'utf-8')
+    content = await cachedRead(filename, 'utf-8')
   } catch (e) {
     return []
   }
