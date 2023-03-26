@@ -33,14 +33,14 @@ export const vuePlugin: Plugin = ({ root, app }) => {
       return
     }
 
-    ctx.type = 'js'
-
     if (!query.type) {
+      ctx.type = 'js'
       ctx.body = compileSFCMain(descriptor, pathname, query.t as string)
       return
     }
 
     if (query.type === 'template') {
+      ctx.type = 'js'
       ctx.body = compileSFCTemplate(
         root,
         descriptor.template!,
@@ -52,10 +52,10 @@ export const vuePlugin: Plugin = ({ root, app }) => {
     }
 
     if (query.type === 'style') {
+      ctx.type = 'css'
       ctx.body = compileSFCStyle(
         root,
         descriptor.styles[Number(query.index)],
-        query.index as string,
         filename,
         pathname
       )
@@ -102,7 +102,7 @@ function compileSFCMain(
 ): string {
   timestamp = timestamp ? `&t=${timestamp}` : ``
   // inject hmr client
-  let code = `import "/__hmrClient"\n`
+  let code = `import { updateStyle } from "/__hmrClient"\n`
   if (descriptor.script) {
     code += descriptor.script.content.replace(
       `export default`,
@@ -112,16 +112,17 @@ function compileSFCMain(
     code += `const __script = {}`
   }
 
+  const id = hash(pathname)
   let hasScoped = false
   if (descriptor.styles) {
     descriptor.styles.forEach((s, i) => {
       if (s.scoped) hasScoped = true
-      code += `\nimport ${JSON.stringify(
+      code += `\nupdateStyle("${id}-${i}", ${JSON.stringify(
         pathname + `?type=style&index=${i}${timestamp}`
-      )}`
+      )})`
     })
     if (hasScoped) {
-      code += `\n__script.__scopeId = "data-v-${hash(pathname)}"`
+      code += `\n__script.__scopeId = "data-v-${id}"`
     }
   }
 
@@ -163,7 +164,6 @@ function compileSFCTemplate(
 function compileSFCStyle(
   root: string,
   style: SFCStyleBlock,
-  index: string,
   filename: string,
   pathname: string
 ): string {
@@ -181,14 +181,5 @@ function compileSFCStyle(
     // TODO
   }
 
-  return `
-    const id = "vue-style-${id}-${index}"
-    let style = document.getElementById(id)
-    if (!style) {
-      style = document.createElement('style')
-      style.id = id
-      document.head.appendChild(style)
-    }
-    style.textContent = ${JSON.stringify(code)}
-  `.trim()
+  return code
 }

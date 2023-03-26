@@ -28,12 +28,12 @@ socket.addEventListener('message', ({ data }) => {
       break
     case 'style-update':
       console.log(`[mvt] ${path} style${index > 0 ? `#${index}` : ``} updated.`)
-      import(`${path}?type=style&index=${index}&t=${Date.now()}`)
+      updateStyle(id, `${path}?type=style&index=${index}&t=${Date.now()}`)
       break
     case 'style-remove':
-      const style = document.getElementById(`vue-style-${id}`)
-      if (style) {
-        style.parentNode!.removeChild(style)
+      const link = document.getElementById(`vue-css-${id}`)
+      if (link) {
+        document.head.removeChild(link)
       }
       break
     case 'full-reload':
@@ -51,3 +51,16 @@ socket.addEventListener('close', () => {
     })
   }, 1000)
 })
+
+export function updateStyle(id: string, url: string) {
+  const linkId = `vite-css-${id}`
+  let link = document.getElementById(linkId)
+  if (!link) {
+    link = document.createElement('link')
+    link.id = linkId
+    link.setAttribute('rel', 'stylesheet')
+    link.setAttribute('type', 'text/css')
+    document.head.appendChild(link)
+  }
+  link.setAttribute('href', url)
+}

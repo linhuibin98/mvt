@@ -94,13 +94,14 @@ export const hmrPlugin: Plugin = ({ root, app, server }) => {
             path: resourcePath
           })
         }
-  
+        const styleId = hash(resourcePath)
         nextStyles.forEach((_, i) => {
           if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
             send({
               type: 'style-update',
               path: resourcePath,
-              index: i
+              index: i,
+              id: `${styleId}-${i}`
             })
           }
         })
@@ -109,7 +110,7 @@ export const hmrPlugin: Plugin = ({ root, app, server }) => {
           send({
             type: 'style-remove',
             path: resourcePath,
-            id: `${hash(resourcePath)}-${i + nextStyles.length}`
+            id: `${styleId}-${i + nextStyles.length}`
           })
         })
       } else {
