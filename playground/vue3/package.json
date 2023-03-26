@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "mvt": "workspace:*",
+    "sass": "^1.60.0",
     "vue": "^3.2.47"
   }
 }
