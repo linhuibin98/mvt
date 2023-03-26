@@ -45,6 +45,7 @@
     "@babel/parser": "^7.21.3",
     "@vue/compiler-sfc": "^3.2.47",
     "chokidar": "^3.5.3",
+    "es-module-lexer": "^1.2.0",
     "hash-sum": "^2.0.0",
     "koa": "^2.14.1",
     "koa-static": "^5.0.0",
