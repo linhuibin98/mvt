@@ -1,6 +1,6 @@
-import type { Middleware } from '../index'
+import type { Plugin } from '../index'
 
-export const historyFallbackMiddleware: Middleware = ({ app }) => {
+export const historyFallbackPlugin: Plugin = ({ app }) => {
   app.use((ctx, next) => {
     const cleanUrl = ctx.url.split('?')[0].split('#')[0]
 

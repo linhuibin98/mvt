@@ -6,7 +6,7 @@ import { parseSFC } from './vue'
 import { createReadStream } from 'fs'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
-import type { Middleware } from '../index'
+import type { Plugin } from '../index'
 
 export interface HMRPayload {
   type: string
@@ -17,7 +17,7 @@ export interface HMRPayload {
 
 const hmrClientPath = path.resolve(__dirname, '../../client/client.js')
 
-export const hmrMiddleware: Middleware = ({ root, app, server }) => {
+export const hmrPlugin: Plugin = ({ root, app, server }) => {
   app.use((ctx, next) => {
     if (ctx.path !== '/__hmrClient') {
       return next()

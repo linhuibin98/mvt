@@ -1,6 +1,8 @@
 // This file runs in the browser.
 import type { HMRRuntime } from 'vue'
 
+console.log('[mvt] connecting...')
+
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 
 const socket = new WebSocket(`ws://${location.host}`)

@@ -7,12 +7,12 @@ import MagicString from 'magic-string'
 // @ts-ignore
 import { init as initLexer, parse } from 'es-module-lexer'
 
-import type { Middleware } from '../index'
+import type { Plugin } from '../index'
 
 const idToFileMap = new Map()
 const fileToIdMap = new Map()
 
-export const moduleResolverMiddleware: Middleware = ({ root, app }) => {
+export const moduleResolverPlugin: Plugin = ({ root, app }) => {
   // rewrite named module imports to `/__modules/:id` requests
   app.use(async (ctx, next) => {
     await next()

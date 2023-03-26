@@ -8,12 +8,12 @@ import {
 import { resolveCompiler } from '../resolveVue'
 import hash from 'hash-sum'
 
-import type { Middleware } from '../index'
+import type { Plugin } from '../index'
 
 // Resolve the correct `vue` and `@vue.compiler-sfc` to use.
 // If the user project has local installations of these, they should be used;
 // otherwise, fallback to the dependency of mvt itself.
-export const vueMiddleware: Middleware = ({ root, app }) => {
+export const vuePlugin: Plugin = ({ root, app }) => {
   app.use(async (ctx, next) => {
     if (!ctx.path.endsWith('.vue')) {
       return next()
@@ -192,5 +192,3 @@ function compileSFCStyle(
     style.textContent = ${JSON.stringify(code)}
   `.trim()
 }
-
-export default vueMiddleware
