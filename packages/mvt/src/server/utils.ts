@@ -19,7 +19,6 @@ export async function cachedRead(path: string, encoding?: BufferEncoding) {
     return cached.content
   }
 
-  console.log('reading from disk: ', path)
   const content = await fs.readFile(path, encoding)
   moduleReadCache.set(path, {
     content,

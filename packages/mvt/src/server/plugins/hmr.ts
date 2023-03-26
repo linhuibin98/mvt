@@ -2,7 +2,7 @@ import path from 'pathe'
 import hash from 'hash-sum'
 import chokidar from 'chokidar'
 import WebSocket from 'ws'
-import { parseSFC } from './vue'
+import { parseSFC, vueCache } from './vue'
 import { cachedRead } from '../utils'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
@@ -59,14 +59,22 @@ export const hmrPlugin: Plugin = ({ root, app, server }) => {
         notify(payload)
       }
       if (file.endsWith('.vue')) {
-        const [descriptor, prevDescriptor] = await parseSFC(root, file)
-  
-        if (!descriptor || !prevDescriptor) {
-          // 文件还没有被访问过
+        const cacheEntry = vueCache.get(file)
+        vueCache.delete(file)
+
+        const descriptor = await parseSFC(root, file)
+        if (!descriptor) {
+          // read failed
+          return
+        }
+
+        const prevDescriptor = cacheEntry && cacheEntry.descriptor
+        if (!prevDescriptor) {
           // the file has never been accessed yet
           return
         }
-  
+        
+        // check which part of the file changed
         if (!isEqual(descriptor.script, prevDescriptor.script)) {
           send({
             type: 'reload',
