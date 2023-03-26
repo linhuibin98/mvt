@@ -7,6 +7,8 @@ importers:
 
   packages/mvt:
     specifiers:
+      '@babel/parser': ^7.21.3
+      '@babel/types': ^7.21.3
       '@types/hash-sum': ^1.0.0
       '@types/koa': ^2.13.5
       '@types/node': ^16.18.16
@@ -38,6 +40,8 @@ importers:
       ws: ^8.13.0
       yorkie: ^2.0.0
     dependencies:
+      '@babel/parser': 7.21.3
+      '@babel/types': 7.21.3
       '@vue/compiler-sfc': 3.2.47
       chokidar: 3.5.3
       es-module-lexer: 1.2.0
@@ -247,7 +251,7 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
     dependencies:
-      '@babel/types': 7.21.2
+      '@babel/types': 7.21.3
 
   /@babel/plugin-syntax-async-generators/7.8.4_@babel+core@7.21.3:
     resolution: {integrity: sha512-tycmZxkGfZaxhMRbXlPXuVFpdWlXpir2W4AMhSJgRKzk/eDlIXOhb2LHWoLpDF7TEHylV5zNhykX6KAgHJmTNw==}
@@ -405,14 +409,6 @@ packages:
       - supports-color
     dev: true
 
-  /@babel/types/7.21.2:
-    resolution: {integrity: sha512-3wRZSs7jiFaB8AjxiiD+VqN5DTG2iRvJGQ+qYFrs/654lg6kGTQWIOFjlBo5RaXuAZjBmP3+OQH4dmhqiiyYxw==}
-    engines: {node: '>=6.9.0'}
-    dependencies:
-      '@babel/helper-string-parser': 7.19.4
-      '@babel/helper-validator-identifier': 7.19.1
-      to-fast-properties: 2.0.0
-
   /@babel/types/7.21.3:
     resolution: {integrity: sha512-sBGdETxC+/M4o/zKC0sl6sjWv62WFR/uzxrJ6uYyMLZOUlPnwzw0tKgVHOXxaAd5l2g8pEDM5RZ495GPQI77kg==}
     engines: {node: '>=6.9.0'}
@@ -420,7 +416,6 @@ packages:
       '@babel/helper-string-parser': 7.19.4
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
-    dev: true
 
   /@bcoe/v8-coverage/0.2.3:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
@@ -2661,7 +2656,7 @@ packages:
       '@babel/plugin-syntax-jsx': 7.18.6_@babel+core@7.21.3
       '@babel/plugin-syntax-typescript': 7.20.0_@babel+core@7.21.3
       '@babel/traverse': 7.21.3
-      '@babel/types': 7.21.2
+      '@babel/types': 7.21.3
       '@jest/expect-utils': 29.5.0
       '@jest/transform': 29.5.0
       '@jest/types': 29.5.0

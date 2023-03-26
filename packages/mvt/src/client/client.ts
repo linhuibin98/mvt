@@ -9,31 +9,42 @@ const socket = new WebSocket(`ws://${location.host}`)
 
 // Listen for messages
 socket.addEventListener('message', ({ data }) => {
-  const { type, path, index, id } = JSON.parse(data)
+  const { type, path, index, id, timestamp } = JSON.parse(data)
   switch (type) {
     case 'connected':
       console.log(`[mvt] connected.`)
       break
-    case 'reload':
-      import(`${path}?t=${Date.now()}`).then((m) => {
+    case 'vue-reload':
+      import(`${path}?t=${timestamp}`).then((m) => {
         __VUE_HMR_RUNTIME__.reload(path, m.default)
         console.log(`[mvt] ${path} reloaded.`)
       })
       break
-    case 'rerender':
-      import(`${path}?type=template&t=${Date.now()}`).then((m) => {
+    case 'vue-rerender':
+      import(`${path}?type=template&t=${timestamp}`).then((m) => {
         __VUE_HMR_RUNTIME__.rerender(path, m.render)
         console.log(`[mvt] ${path} template updated.`)
       })
       break
-    case 'style-update':
+    case 'vue-style-update':
+      updateStyle(id, `${path}?type=style&index=${index}&t=${timestamp}`)
       console.log(`[mvt] ${path} style${index > 0 ? `#${index}` : ``} updated.`)
-      updateStyle(id, `${path}?type=style&index=${index}&t=${Date.now()}`)
       break
-    case 'style-remove':
+    case 'vue-style-remove':
       const link = document.getElementById(`vue-css-${id}`)
       if (link) {
         document.head.removeChild(link)
+      }
+      break
+    case 'js-update':
+      const update = jsUpdateMap.get(path)
+      if (update) {
+        update(timestamp)
+        console.log(`[mvt]: js module reloaded: `, path)
+      } else {
+        console.error(
+          `[mvt] got js update notification but no client callback was registered. Something is wrong.`
+        )
       }
       break
     case 'full-reload':
@@ -53,7 +64,7 @@ socket.addEventListener('close', () => {
 })
 
 export function updateStyle(id: string, url: string) {
-  const linkId = `vite-css-${id}`
+  const linkId = `mvt-css-${id}`
   let link = document.getElementById(linkId)
   if (!link) {
     link = document.createElement('link')
@@ -65,12 +76,22 @@ export function updateStyle(id: string, url: string) {
   link.setAttribute('href', url)
 }
 
+const jsUpdateMap = new Map<string, (timestamp: number) => void>()
+
 export const hot = {
   accept(
-    boundaryUrl: string,
-    deps: string[],
-    callback: (modules: object[]) => void
+    importer: string,
+    deps: string | string[],
+    callback: (modules: object | object[]) => void
   ) {
-    // TODO
+    jsUpdateMap.set(importer, (timestamp: number) => {
+      if (Array.isArray(deps)) {
+        Promise.all(deps.map((dep) => import(dep + `?t=${timestamp}`))).then(
+          callback
+        )
+      } else {
+        import(deps + `?t=${timestamp}`).then(callback)
+      }
+    })
   }
 }

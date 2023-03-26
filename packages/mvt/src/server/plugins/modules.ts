@@ -4,10 +4,12 @@ import { Readable } from 'stream'
 import resolve from 'resolve-from'
 import MagicString from 'magic-string'
 // @ts-ignore
-import { init as initLexer, parse } from 'es-module-lexer'
+import { init as initLexer, parse as parseImports } from 'es-module-lexer'
 import { cachedRead } from '../utils'
 import { promises as fs } from 'fs'
 import { hmrClientPublicPath } from './hmr'
+import { parse } from '@babel/parser'
+import { StringLiteral } from '@babel/types'
 
 import type { Plugin } from '../index'
 
@@ -164,10 +166,9 @@ async function resolveWebModule(
     const importMap = require(importMapPath)
     if (importMap.imports) {
       const webModulesDir = path.dirname(importMapPath)
-      Object.entries(
-        importMap.imports
-      ).forEach(([key, val]: [string, string]) =>
-        webModulesMap.set(key, path.join(webModulesDir, val))
+      Object.entries(importMap.imports).forEach(
+        ([key, val]: [string, string]) =>
+          webModulesMap.set(key, path.join(webModulesDir, val))
       )
       return webModulesMap.get(id)
     }
@@ -176,13 +177,24 @@ async function resolveWebModule(
 
 // while we lex the files for imports we also build a import graph
 // so that we can determine what files to hot reload
-export const importerMap = new Map<string, Set<string>>() // 模块被什么模块依赖
-export const importeeMap = new Map<string, Set<string>>() // 模块依赖的模块
-export const hotBoundariesMap = new Map<string, Set<string>>()
+type HMRStateMap = Map<string, Set<string>>
+
+export const importerMap: HMRStateMap = new Map() // 模块被什么模块依赖
+export const importeeMap: HMRStateMap = new Map() // 模块依赖的模块
+export const hmrBoundariesMap: HMRStateMap = new Map()
+
+const ensureMapEntry = (map: HMRStateMap, key: string): Set<string> => {
+  let entry = map.get(key)
+  if (!entry) {
+    entry = new Set<string>()
+    map.set(key, entry)
+  }
+  return entry
+}
 
 function rewriteImports(source: string, importer: string, timestamp?: string) {
   try {
-    const [imports] = parse(source)
+    const [imports] = parseImports(source)
     if (imports.length) {
       const s = new MagicString(source)
       let hasReplaced = false
@@ -198,7 +210,13 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
             s.overwrite(start, end, `/@modules/${id}`)
             hasReplaced = true
           } else if (id === hmrClientPublicPath) {
-            //
+            if (!/.vue$|.vue\?type=/.test(importer)) {
+              // the user explicit imports the HMR API in a js file
+              // making the module hot.
+              parseAcceptedDeps(source, importer, s)
+              // we rewrite the hot.accept call
+              hasReplaced = true
+            }
           } else {
             // force re-fetch all imports by appending timestamp
             // if this is a hmr refresh request
@@ -213,12 +231,7 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
             // save the import chain for hmr analysis
             const importee = path.join(path.dirname(importer), id)
             currentImportees.add(importee)
-            let importers = importerMap.get(importee)
-            if (!importers) {
-              importers = new Set()
-              importerMap.set(importee, importers)
-            }
-            importers.add(importer)
+            ensureMapEntry(importerMap, importee).add(importer)
           }
         } else if (dynamicIndex >= 0) {
           // TODO dynamic import
@@ -243,7 +256,66 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
 
     return source
   } catch (e) {
-    console.error(`Error: module imports rewrite failed for source:\n`, source)
+    console.error(
+      `[mvt] Error: module imports rewrite failed for ${importer}.`,
+      e
+    )
     return source
   }
+}
+
+function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
+  const ast = parse(source, {
+    sourceType: 'module',
+    plugins: [
+      // by default we enable proposals slated for ES2020.
+      // full list at https://babeljs.io/docs/en/next/babel-parser#plugins
+      // this should be kept in async with @vue/compiler-core's support range
+      'bigInt',
+      'optionalChaining',
+      'nullishCoalescingOperator'
+    ]
+  }).program.body
+
+  const registerDep = (e: StringLiteral) => {
+    const deps = ensureMapEntry(hmrBoundariesMap, importer)
+    const depPublicPath = path.join(path.dirname(importer), e.value)
+    deps.add(depPublicPath)
+    s.overwrite(e.start!, e.end!, JSON.stringify(depPublicPath))
+  }
+
+  ast.forEach((node) => {
+    if (
+      node.type === 'ExpressionStatement' &&
+      node.expression.type === 'CallExpression' &&
+      node.expression.callee.type === 'MemberExpression' &&
+      node.expression.callee.object.type === 'Identifier' &&
+      node.expression.callee.object.name === 'hot' &&
+      node.expression.callee.property.type === 'Identifier' &&
+      node.expression.callee.property.name === 'accept'
+    ) {
+      const args = node.expression.arguments
+      // inject the imports's own path so it becomes
+      // hot.accept('/foo.js', ['./bar.js'], () => {})
+      s.appendLeft(args[0].start!, JSON.stringify(importer) + ', ')
+      // register the accepted deps
+      if (args[0].type === 'ArrayExpression') {
+        args[0].elements.forEach((e) => {
+          if (e && e.type !== 'StringLiteral') {
+            console.error(
+              `[mvt] HMR syntax error in ${importer}: hot.accept() deps list can only contain string literals.`
+            )
+          } else if (e) {
+            registerDep(e)
+          }
+        })
+      } else if (args[0].type === 'StringLiteral') {
+        registerDep(args[0])
+      } else {
+        console.error(
+          `[mvt] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
+        )
+      }
+    }
+  })
 }
