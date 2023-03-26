@@ -8,6 +8,7 @@ import { resolveCompiler } from '../resolveVue'
 import hash from 'hash-sum'
 import { cachedRead } from '../utils'
 import LRUCache from 'lru-cache'
+import { hmrClientPublicPath } from './hmr'
 
 import type { Plugin } from '../index'
 
@@ -124,7 +125,7 @@ function compileSFCMain(
 
   timestamp = timestamp ? `&t=${timestamp}` : ``
   // inject hmr client
-  let code = `import { updateStyle } from "/__hmrClient"\n`
+  let code = `import { updateStyle } from "${hmrClientPublicPath}"\n`
   if (descriptor.script) {
     code += descriptor.script.content.replace(
       `export default`,
@@ -182,7 +183,7 @@ function compileSFCTemplate(
     source: template.content,
     filename,
     compilerOptions: {
-      runtimeModuleName: '/__modules/vue',
+      runtimeModuleName: '/@modules/vue',
       scopeId: scoped ? `data-v-${hash(pathname)}` : null
     }
   })

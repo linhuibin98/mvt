@@ -16,15 +16,16 @@ export interface HMRPayload {
   id?: string
 }
 
-const hmrClientPath = path.resolve(__dirname, '../../client/client.js')
+const hmrClientFilePath = path.resolve(__dirname, '../../client/client.js')
+export const hmrClientPublicPath = '/@hmr'
 
 export const hmrPlugin: Plugin = ({ root, app, server }) => {
   app.use(async (ctx, next) => {
-    if (ctx.path !== '/__hmrClient') {
+    if (ctx.path !== hmrClientPublicPath) {
       return next()
     }
     ctx.type = 'js'
-    ctx.body = await cachedRead(hmrClientPath)
+    ctx.body = await cachedRead(hmrClientFilePath)
   })
 
   // start a websocket server to send hmr notifications to the client
@@ -62,32 +63,41 @@ export const hmrPlugin: Plugin = ({ root, app, server }) => {
     if (file.endsWith('.vue')) {
       handleVueSFCReload(file, servedPath)
     } else {
-      // normal js file
-      const importers = importerMap.get(servedPath)
-      if (importers) {
-        const vueImporters = new Set<string>()
-        const jsHotImporters = new Set<string>()
-        const hasDeadEnd = walkImportChain(
-          importers,
-          vueImporters,
-          jsHotImporters
-        )
-
-        if (hasDeadEnd) {
-          notify({
-            type: 'full-reload'
-          })
-        } else {
-          vueImporters.forEach((vueImporter) => {
-            notify({
-              type: 'reload',
-              path: vueImporter
-            })
-          })
-        }
-      }
+      handleJSReload(servedPath)
     }
   })
+
+  function handleJSReload(servedPath: string) {
+    // normal js file
+    const importers = importerMap.get(servedPath)
+    if (importers) {
+      const vueImporters = new Set<string>()
+      const jsHotImporters = new Set<string>()
+      const hasDeadEnd = walkImportChain(
+        importers,
+        vueImporters,
+        jsHotImporters
+      )
+
+      if (hasDeadEnd) {
+        notify({
+          type: 'full-reload'
+        })
+      } else {
+        vueImporters.forEach((vueImporter) => {
+          notify({
+            type: 'reload',
+            path: vueImporter
+          })
+        })
+
+        jsHotImporters.forEach((jsImporter) => {
+          // TODO
+          console.log(jsImporter)
+        })
+      }
+    }
+  }
 
   function walkImportChain(
     currentImporters: Set<string>,
@@ -118,7 +128,7 @@ export const hmrPlugin: Plugin = ({ root, app, server }) => {
 
   function isHotBoundary(servedPath: string): boolean {
     // TODO
-    return false
+    return true
   }
 
   async function handleVueSFCReload(file: string, servedPath: string) {
