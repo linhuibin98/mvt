@@ -10,14 +10,21 @@ import { promises as fs } from 'fs'
 import { hmrClientPublicPath } from './hmr'
 import { parse } from '@babel/parser'
 import { StringLiteral } from '@babel/types'
+import LRUCache from 'lru-cache'
 
 import type { Plugin } from '../index'
 
 const idToFileMap = new Map()
 const fileToIdMap = new Map()
 const webModulesMap = new Map()
+const rewriteCache = new LRUCache({ max: 65535 })
 
-export const moduleResolverPlugin: Plugin = ({ root, app }) => {
+export const moduleResolverPlugin: Plugin = ({ root, app, watcher }) => {
+  // bust module rewrite cache on file change
+  watcher.on('change', (file) => {
+    rewriteCache.delete('/' + path.relative(root, file))
+  })
+
   // rewrite named module imports to `/@modules/:id` requests
   app.use(async (ctx, next) => {
     await next()
@@ -27,14 +34,19 @@ export const moduleResolverPlugin: Plugin = ({ root, app }) => {
     }
 
     if (ctx.url === '/index.html') {
-      const html = await readBody(ctx.body)
-      await initLexer
-      ctx.body = html.replace(
-        /(<script\b[^>]*>)([\s\S]*?)<\/script>/gm,
-        (_, openTag, script) => {
-          return `${openTag}${rewriteImports(script, '/index.html')}</script>`
-        }
-      )
+      if (rewriteCache.has('/index.html')) {
+        ctx.body = rewriteCache.get('/index.html')
+      } else {
+        const html = await readBody(ctx.body)
+        await initLexer
+        ctx.body = html.replace(
+          /(<script\b[^>]*>)([\s\S]*?)<\/script>/gm,
+          (_, openTag, script) => {
+            return `${openTag}${rewriteImports(script, '/index.html')}</script>`
+          }
+        )
+        rewriteCache.set('/index.html', ctx.body)
+      }
     }
 
     // we are doing the js rewrite after all other middlewares have finished;
@@ -42,17 +54,23 @@ export const moduleResolverPlugin: Plugin = ({ root, app }) => {
     // regardless of the extension of the original files.
     if (
       ctx.response.is('js') &&
+      !ctx.url.endsWith('.map') &&
       // skip internal client
       !ctx.path.startsWith(`/@hmr`) &&
       // only need to rewrite for <script> part in vue files
       !(ctx.path.endsWith('.vue') && ctx.query.type != null)
     ) {
-      await initLexer
-      ctx.body = rewriteImports(
-        await readBody(ctx.body),
-        ctx.url.replace(/(&|\?)t=\d+/, ''),
-        ctx.query.t as string
-      )
+      if (rewriteCache.has(ctx.path)) {
+        ctx.body = rewriteCache.get(ctx.path)
+      } else {
+        await initLexer
+        ctx.body = rewriteImports(
+          await readBody(ctx.body),
+          ctx.url.replace(/(&|\?)t=\d+/, ''),
+          ctx.query.t as string
+        )
+        rewriteCache.set(ctx.path, ctx.body)
+      }
     }
   })
 
@@ -200,6 +218,10 @@ const ensureMapEntry = (map: HMRStateMap, key: string): Set<string> => {
 }
 
 function rewriteImports(source: string, importer: string, timestamp?: string) {
+  if (typeof source !== 'string') {
+    source = String(source)
+  }
+
   try {
     const [imports] = parseImports(source)
     if (imports.length) {
@@ -264,7 +286,7 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
     return source
   } catch (e) {
     console.error(
-      `[mvt] Error: module imports rewrite failed for ${importer}.`,
+      `[mvt] Error: module imports rewrite failed for ${importer}.\n`,
       e
     )
     return source
