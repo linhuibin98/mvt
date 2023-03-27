@@ -15,7 +15,9 @@ importers:
       '@types/serve-handler': ^6.1.1
       '@types/ws': ^8.5.4
       '@vue/compiler-sfc': ^3.2.47
+      chalk: ^5.2.0
       chokidar: ^3.5.3
+      debug: ^4.3.4
       es-module-lexer: ^1.2.0
       execa: ^4
       hash-sum: ^2.0.0
@@ -43,7 +45,9 @@ importers:
       '@babel/parser': 7.21.3
       '@babel/types': 7.21.3
       '@vue/compiler-sfc': 3.2.47
+      chalk: 5.2.0
       chokidar: 3.5.3
+      debug: 4.3.4
       es-module-lexer: 1.2.0
       hash-sum: 2.0.0
       koa: 2.14.1
@@ -1285,7 +1289,6 @@ packages:
   /chalk/5.2.0:
     resolution: {integrity: sha512-ree3Gqw/nazQAPuJJEy+avdl7QfZMcUvmHIKgEZkGL+xOBzRvup5Hxo6LHuMceSxOabuJLJm5Yp/92R9eMmMvA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-    dev: true
 
   /char-regex/1.0.2:
     resolution: {integrity: sha512-kWWXztvZ5SBQV+eRgKFeh8q5sLuZY2+8WUIzlxWVTg+oGwY14qylx1KbKzHd8P6ZYkAg0xyIDU9JMHhyJMZ1jw==}

@@ -5,7 +5,6 @@ import chokidar, { FSWatcher } from 'chokidar'
 import { hmrPlugin } from './plugins/hmr'
 import { moduleResolverPlugin } from './plugins/modules'
 import { vuePlugin } from './plugins/vue'
-import { historyFallbackPlugin } from './plugins/historyFallback'
 import { servePlugin } from './plugins/serve'
 
 export interface PluginContext {
@@ -26,7 +25,6 @@ const internalPlugins: Plugin[] = [
   hmrPlugin,
   moduleResolverPlugin,
   vuePlugin,
-  historyFallbackPlugin,
   servePlugin
 ]
 
