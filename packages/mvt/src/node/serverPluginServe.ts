@@ -1,4 +1,4 @@
-import type { Plugin } from '../index'
+import type { Plugin } from './server'
 
 const debug = require('debug')('mvt:history')
 

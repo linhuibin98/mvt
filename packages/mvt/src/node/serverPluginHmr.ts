@@ -31,12 +31,12 @@
 import path from 'pathe'
 import hash from 'hash-sum'
 import WebSocket from 'ws'
-import { parseSFC, vueCache } from './vue'
-import { importerMap, hmrBoundariesMap } from './modules'
-import { cachedRead } from '../utils'
+import { parseSFC, vueCache } from './serverPluginVue'
+import { importerMap, hmrBoundariesMap } from './serverPluginModules'
+import { cachedRead } from './utils'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
-import type { Plugin } from '../index'
+import type { Plugin } from './server'
 
 export interface HMRPayload {
   type: string
@@ -48,7 +48,8 @@ export interface HMRPayload {
 
 const debug = require('debug')('mvt:hmr')
 
-const hmrClientFilePath = path.resolve(__dirname, '../../client/client.js')
+// client and node files are placed flat in the dist folder
+const hmrClientFilePath = path.resolve(__dirname, './client.js')
 export const hmrClientPublicPath = '/@hmr'
 
 export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {

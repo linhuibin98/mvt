@@ -2,10 +2,10 @@ import http, { Server } from 'http'
 import Koa from 'koa'
 import chokidar, { FSWatcher } from 'chokidar'
 
-import { hmrPlugin } from './plugins/hmr'
-import { moduleResolverPlugin } from './plugins/modules'
-import { vuePlugin } from './plugins/vue'
-import { servePlugin } from './plugins/serve'
+import { hmrPlugin } from './serverPluginHmr'
+import { moduleResolverPlugin } from './serverPluginModules'
+import { vuePlugin } from './serverPluginVue'
+import { servePlugin } from './serverPluginServe'
 
 export interface PluginContext {
   root: string

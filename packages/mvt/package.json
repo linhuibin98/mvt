@@ -10,8 +10,8 @@
   "bin": {
     "mvt": "bin/mvt.js"
   },
-  "main": "dist/server/index.js",
-  "types": "dist/server/index.d.ts",
+  "main": "dist/node/index.js",
+  "types": "dist/node/index.d.ts",
   "files": [
     "bin",
     "dist"
@@ -19,8 +19,8 @@
   "scripts": {
     "dev": "run-p dev-client dev-server",
     "dev-client": "tsc -w --p src/client",
-    "dev-server": "tsc -w --p src/server",
-    "build": "rimraf dist && tsc -p src/client && tsc -p src/server",
+    "dev-server": "tsc -w --p src/node",
+    "build": "rimraf dist && tsc -p src/client && tsc -p src/node",
     "lint": "prettier --write --parser typescript \"src/**/*.ts\"",
     "test": "npm run build && jest",
     "prepublishOnly": "npm run build"

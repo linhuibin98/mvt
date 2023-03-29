@@ -1,18 +1,18 @@
-import { resolveVue } from '../resolveVue'
+import { resolveVue } from './resolveVue'
 import path from 'pathe'
 import { Readable } from 'stream'
 import resolve from 'resolve-from'
 import MagicString from 'magic-string'
 // @ts-ignore
 import { init as initLexer, parse as parseImports } from 'es-module-lexer'
-import { cachedRead } from '../utils'
+import { cachedRead } from './utils'
 import { promises as fs } from 'fs'
-import { hmrClientPublicPath } from './hmr'
+import { hmrClientPublicPath } from './serverPluginHmr'
 import { parse } from '@babel/parser'
 import { StringLiteral } from '@babel/types'
 import LRUCache from 'lru-cache'
 
-import type { Plugin } from '../index'
+import type { Plugin } from './server'
 
 const debugImportRewrite = require('debug')('mvt:rewrite')
 const debugModuleResolution = require('debug')('mvt:resolve')

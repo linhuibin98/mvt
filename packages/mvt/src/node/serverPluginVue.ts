@@ -4,13 +4,13 @@ import {
   SFCTemplateBlock,
   SFCStyleBlock
 } from '@vue/compiler-sfc'
-import { resolveCompiler } from '../resolveVue'
+import { resolveCompiler } from './resolveVue'
 import hash from 'hash-sum'
-import { cachedRead } from '../utils'
+import { cachedRead } from './utils'
 import LRUCache from 'lru-cache'
-import { hmrClientPublicPath } from './hmr'
+import { hmrClientPublicPath } from './serverPluginHmr'
 
-import type { Plugin } from '../index'
+import type { Plugin } from './server'
 
 interface CacheEntry {
   descriptor?: SFCDescriptor
