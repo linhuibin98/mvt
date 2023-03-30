@@ -1,5 +1,5 @@
 <template>
-  <div class="demo">
+  <div :class="$style.demo">
     <div>
       count: {{ count }}
       <button @click="increase">+1</button>
@@ -24,8 +24,9 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped module>
 .demo {
   font-size: 20px;
+  color: red;
 }
 </style>

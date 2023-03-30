@@ -201,25 +201,31 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
       return
     }
 
-    if (!isEqual(descriptor.template, prevDescriptor.template)) {
-      notify({
-        type: 'vue-rerender',
-        path: servedPath,
-        timestamp
-      })
-      return
-    }
-
     const prevStyles = prevDescriptor.styles || []
     const nextStyles = descriptor.styles || []
+    // style scope
     if (prevStyles.some((s) => s.scoped) !== nextStyles.some((s) => s.scoped)) {
       notify({
         type: 'vue-reload',
         path: servedPath,
         timestamp
       })
+      return
     }
+
     const styleId = hash(servedPath)
+    for (let i = 0; i < nextStyles.length; i++) {
+      // style module
+      if ((prevStyles[i]?.module || nextStyles[i]?.module) && !isEqual(prevStyles[i], nextStyles[i])) {
+        notify({
+          type: 'vue-reload',
+          path: servedPath,
+          timestamp
+        })
+        return
+      }
+    }
+
     nextStyles.forEach((_, i) => {
       if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
         notify({
@@ -231,6 +237,15 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
         })
       }
     })
+
+    if (!isEqual(descriptor.template, prevDescriptor.template)) {
+      notify({
+        type: 'vue-rerender',
+        path: servedPath,
+        timestamp
+      })
+    }
+
     prevStyles.slice(nextStyles.length).forEach((_, i) => {
       notify({
         type: 'vue-style-remove',
