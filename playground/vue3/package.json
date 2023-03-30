@@ -4,7 +4,8 @@
   "description": "mvt demo vue3",
   "main": "index.js",
   "scripts": {
-    "dev": "mvt"
+    "dev": "mvt",
+    "build": "mvt build"
   },
   "keywords": [],
   "author": "",

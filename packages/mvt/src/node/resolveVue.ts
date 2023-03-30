@@ -1,22 +1,31 @@
-import path from 'path'
+import path from 'pathe'
 import resolve from 'resolve-from'
 import sfcCompiler from '@vue/compiler-sfc'
 
 interface ResolvedVuePaths {
   vue: string
+  hasLocalVue: boolean
   compiler: string
 }
 
 let resolved: ResolvedVuePaths | undefined = undefined
 
-export function resolveVue(root: string): ResolvedVuePaths {
+const toBuildPaths = (p: ResolvedVuePaths) => ({
+  ...p,
+  vue: p.vue.replace('esm-browser', 'esm-bundler')
+})
+
+// Resolve the correct `vue` and `@vue.compiler-sfc` to use.
+// If the user project has local installations of these, they should be used;
+// otherwise, fallback to the dependency of mvt itself.
+export function resolveVue(root: string, isBuild = false): ResolvedVuePaths {
   if (resolved) {
-    return resolved
+    return isBuild ? toBuildPaths(resolved) : resolved
   }
 
   let vuePath: string
   let compilerPath: string
-
+  let hasLocalVue = true
   try {
     // see if user has local vue installation
     const userVuePkg = resolve(root, 'vue/package.json')
@@ -33,6 +42,7 @@ export function resolveVue(root: string): ResolvedVuePaths {
         }
         compilerPath = path.join(path.dirname(compilerPkgPath), compilerPkg.main)
       } catch (e) {
+        hasLocalVue = false
         // user has local vue but has no compiler-sfc
         console.error(
           `[mvt] Error: a local installation of \`vue\` is detected but ` +
@@ -47,10 +57,13 @@ export function resolveVue(root: string): ResolvedVuePaths {
     compilerPath = require.resolve('@vue/compiler-sfc')
   }
 
-  return (resolved = {
+  resolved = {
     vue: vuePath,
+    hasLocalVue,
     compiler: compilerPath
-  })
+  }
+
+  return isBuild ? toBuildPaths(resolved) : resolved
 }
 
 export function resolveCompiler(root: string): typeof sfcCompiler {
