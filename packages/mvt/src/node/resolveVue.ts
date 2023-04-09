@@ -1,6 +1,7 @@
 import path from 'pathe'
 import resolve from 'resolve-from'
 import sfcCompiler from '@vue/compiler-sfc'
+import chalk from 'chalk'
 
 interface ResolvedVuePaths {
   vue: string
@@ -30,27 +31,29 @@ export function resolveVue(root: string, isBuild = false): ResolvedVuePaths {
     // see if user has local vue installation
     const userVuePkg = resolve(root, 'vue/package.json')
     vuePath = path.join(
-        path.dirname(userVuePkg),
-        'dist/vue.runtime.esm-browser.js'
-      )
-     // also resolve matching sfc compiler
-     try {
-        const compilerPkgPath = resolve(root, '@vue/compiler-sfc/package.json')
-        const compilerPkg = require(compilerPkgPath)
-        if (compilerPkg.version !== require(userVuePkg).version) {
-          throw new Error()
-        }
-        compilerPath = path.join(path.dirname(compilerPkgPath), compilerPkg.main)
-      } catch (e) {
-        hasLocalVue = false
-        // user has local vue but has no compiler-sfc
-        console.error(
+      path.dirname(userVuePkg),
+      'dist/vue.runtime.esm-browser.js'
+    )
+    // also resolve matching sfc compiler
+    try {
+      const compilerPkgPath = resolve(root, '@vue/compiler-sfc/package.json')
+      const compilerPkg = require(compilerPkgPath)
+      if (compilerPkg.version !== require(userVuePkg).version) {
+        throw new Error()
+      }
+      compilerPath = path.join(path.dirname(compilerPkgPath), compilerPkg.main)
+    } catch (e) {
+      hasLocalVue = false
+      // user has local vue but has no compiler-sfc
+      console.error(
+        chalk.red(
           `[mvt] Error: a local installation of \`vue\` is detected but ` +
             `no matching \`@vue/compiler-sfc\` is found. Make sure to install ` +
             `both and use the same version.`
         )
-        compilerPath = require.resolve('@vue/compiler-sfc')
-      }
+      )
+      compilerPath = require.resolve('@vue/compiler-sfc')
+    }
   } catch (e) {
     // user has no local vue, use mvt's dependency version
     vuePath = require.resolve('vue/dist/vue.runtime.esm-browser.js')

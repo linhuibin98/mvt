@@ -34,6 +34,7 @@ import WebSocket from 'ws'
 import { parseSFC, vueCache } from './serverPluginVue'
 import { importerMap, hmrBoundariesMap } from './serverPluginModules'
 import { cachedRead } from './utils'
+import chalk from 'chalk'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
 import type { Plugin } from './server'
@@ -77,6 +78,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
 
   wss.on('error', (e: Error & { code: string }) => {
     if (e.code !== 'EADDRINUSE') {
+      console.error(chalk.red(`[mvt] WebSocket server error:`))
       console.error(e)
     }
   })

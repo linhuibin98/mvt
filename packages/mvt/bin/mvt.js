@@ -1,9 +1,14 @@
 #!/usr/bin/env node
-
+const chalk = require('chalk')
 const argv = require('minimist')(process.argv.slice(2))
 
 if (argv._[0] === 'build') {
-    require('../dist').build(argv)
+    require('../dist')
+        .build(argv)
+        .catch((err) => {
+            console.error(chalk.red(`[mvt] Build errored out.`))
+            console.log(err)
+        })
 } else {
     const server = require('../dist/index').createServer(argv)
 
@@ -17,6 +22,7 @@ if (argv._[0] === 'build') {
                 server.listen(++port)
             }, 100)
         } else {
+            console.error(chalk.red(`[mvt] server error:`))
             console.error(e)
             reject(e)
         }
