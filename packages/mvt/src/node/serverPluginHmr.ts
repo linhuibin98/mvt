@@ -2,7 +2,7 @@
 // 1. `.vue` files are transformed into `.js` files before being served
 // 2. All `.js` files, before being served, are parsed to detect their imports
 //    (this is done in `./modules.ts`) for module import rewriting. During this
-//    we also record the importer/importee relationships which can beused for
+//    we also record the importer/importee relationships which can be used for
 //    HMR analysis (we do both at the same time to avoid double parse costs)
 // 3. When a `.vue` file changes, we directly read, parse it again and
 //    notify the client because Vue components are self-accepting by nature
@@ -22,10 +22,10 @@
 
 // How do we get a js HMR boundary's accepted list on the server
 // 1. During the import rewriting, if `/@hmr` import is present in a js file,
-//    we will do a fullblown parse of the file to find the `hot.accept` call,
+//    we will do a full-blown parse of the file to find the `hot.accept` call,
 //    and records the file and its accepted dependencies in a `hmrBoundariesMap`
 // 2. We also inject the boundary file's full path into the `hot.accept` call
-//    so that on the client, the `hot.accept` call would have reigstered for
+//    so that on the client, the `hot.accept` call would have registered for
 //    updates using the full paths of the dependencies.
 
 import path from 'pathe'
