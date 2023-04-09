@@ -5,6 +5,7 @@ import { hmrClientPublicPath } from './serverPluginHmr'
 import chalk from 'chalk'
 import { rollup as Rollup, Plugin } from 'rollup'
 import {normalizePath} from '@rollup/pluginutils';
+import resolve from 'resolve-from'
 
 export interface BuildOptions {
   root?: string
@@ -86,7 +87,14 @@ export async function build({
     input: indexPath,
     plugins: [
       mvtPlugin,
-      require('rollup-plugin-vue')(),
+      require('rollup-plugin-vue')({
+        // TODO: for now we directly handle pre-processors in rollup-plugin-vue
+        // so that we don't need to install dedicated rollup plugins.
+        // In the future we probably want to still use rollup plugins so that
+        // preprocessors are also supported by importing from js files.
+        preprocessStyles: true,
+        preprocessCustomRequire: (id: string) => require(resolve(root, id))
+      }),
       require('@rollup/plugin-node-resolve')({
         rootDir: root
       }),
