@@ -47,8 +47,12 @@ For libraries that provide ES modules builds that work in browsers, just directl
 
 Imports to npm packages inside .js files (package name only) are re-written on the fly to point to locally installed files. Currently, only vue is supported as a special case. Other packages will likely need to be transformed to be exposed as a native browser-targeting ES module.
 
-## Deploying for Production
+## Building for Production
 
 Starting with version `^0.5.0`, you can run `mvt build` to bundle the app and deploy it for production.
 
-Internally, we use a highly opinionated rollup config to generate the build. There is currently intentionally no exposed way to configure the build -- but we will likely tackle that at a later stage.
+- `mvt build --root dir`: build files in the target directory instead of current working directory.
+
+- `mvt build --cdn`: import `vue` from a CDN link in the built js. This will make the build faster, but overall the page payload will be larger because therer will be no tree-shaking for Vue APIs.
+
+Internally, we use a highly opinionated Rollup config to generate the build. There is currently intentionally no exposed way to configure the build -- we will likely tackle that at a later stage.
