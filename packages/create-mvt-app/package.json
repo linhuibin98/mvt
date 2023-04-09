@@ -1,0 +1,25 @@
+{
+    "name": "create-mvt-app",
+    "version": "1.0.0",
+    "license": "MIT",
+    "author": "linhuibin98",
+    "main": "index.js",
+    "bin": {
+      "create-mvt-app": "index.js"
+    },
+    "files": [
+      "index.js",
+      "template"
+    ],
+    "scripts": {
+      "prepublishOnly": "node updateVersions.js"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/linhuibin98/mvt.git"
+    },
+    "bugs": {
+      "url": "https://github.com/linhuibin98/mvt/issues"
+    },
+    "homepage": "https://github.com/linhuibin98/mvt/tree/main/#readme"
+  }

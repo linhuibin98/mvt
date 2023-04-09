@@ -1,0 +1,15 @@
+{
+    "name": "__NAME__",
+    "version": "0.0.0",
+    "scripts": {
+      "dev": "mvt",
+      "build": "mvt build"
+    },
+    "dependencies": {
+        "vue": "^3.2.47"
+    },
+    "devDependencies": {
+        "mvt": "^0.5.1",
+        "@vue/compiler-sfc": "^3.2.47"
+    }
+  }
