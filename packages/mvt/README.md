@@ -46,3 +46,9 @@ The server intercepts requests to *.vue files, compiles them on the fly, and sen
 For libraries that provide ES modules builds that work in browsers, just directly import them from a CDN.
 
 Imports to npm packages inside .js files (package name only) are re-written on the fly to point to locally installed files. Currently, only vue is supported as a special case. Other packages will likely need to be transformed to be exposed as a native browser-targeting ES module.
+
+## Deploying for Production
+
+Starting with version `^0.5.0`, you can run `mvt build` to bundle the app and deploy it for production.
+
+Internally, we use a highly opinionated rollup config to generate the build. There is currently intentionally no exposed way to configure the build -- but we will likely tackle that at a later stage.

@@ -99,7 +99,10 @@ export async function build({
         rootDir: root
       }),
       require('@rollup/plugin-replace')({
-        'process.env.NODE_ENV': '"production"'
+        preventAssignment: true,
+        values: {
+          'process.env.NODE_ENV': '"production"'
+        }
       }),
       cssExtractPlugin,
       require('rollup-plugin-terser').terser()
