@@ -16,6 +16,7 @@ export async function build({
   root = process.cwd(),
   cdn = resolveVue(root).hasLocalVue
 }: BuildOptions = {}) {
+  process.env.NODE_ENV = 'production'
   const start = Date.now()
 
   // lazy require rollup so that we don't load it when only using the dev server
@@ -84,6 +85,7 @@ export async function build({
 
   const bundle = await rollup({
     input: indexPath,
+    preserveEntrySignatures: false,
     plugins: [
       mvtPlugin,
       require('rollup-plugin-vue')({
