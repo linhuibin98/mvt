@@ -35,6 +35,7 @@ import { parseSFC, vueCache } from './serverPluginVue'
 import { importerMap, hmrBoundariesMap } from './serverPluginModules'
 import { cachedRead } from './utils'
 import chalk from 'chalk'
+import {normalizePath} from '@rollup/pluginutils';
 
 import type { SFCBlock } from '@vue/compiler-sfc'
 import type { Plugin } from './server'
@@ -53,7 +54,7 @@ const debug = require('debug')('mvt:hmr')
 export const hmrClientFilePath = path.resolve(__dirname, './client.js')
 export const hmrClientPublicPath = '/@hmr'
 
-export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
+export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
   app.use(async (ctx, next) => {
     if (ctx.path !== hmrClientPublicPath) {
       return next()
@@ -90,25 +91,24 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
   }
 
   watcher.on('change', async (file) => {
-    file = path.normalize(file)
-    const servedPath = '/' + path.relative(root, file)
+    file = normalizePath(file);
     const timestamp = Date.now()
-
+    const publicPath = resolver.fileToPublic(file)
     if (file.endsWith('.vue')) {
-      handleVueSFCReload(file, servedPath, timestamp)
+      handleVueSFCReload(file, publicPath, timestamp)
     } else {
-      handleJSReload(servedPath, timestamp)
+      handleJSReload(publicPath, timestamp)
     }
   })
 
-  function handleJSReload(servedPath: string, timestamp: number) {
+  function handleJSReload(publicPath: string, timestamp: number) {
     // normal js file
-    const importers = importerMap.get(servedPath)
+    const importers = importerMap.get(publicPath)
     if (importers) {
       const vueImporters = new Set<string>()
       const jsHotImporters = new Set<string>()
       const hasDeadEnd = walkImportChain(
-        servedPath,
+        publicPath,
         importers,
         vueImporters,
         jsHotImporters
@@ -175,7 +175,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
 
   async function handleVueSFCReload(
     file: string,
-    servedPath: string,
+    publicPath: string,
     timestamp: number
   ) {
     const cacheEntry = vueCache.get(file)
@@ -205,7 +205,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
       needRerender = true
     }
 
-    const styleId = hash(servedPath)
+    const styleId = hash(publicPath)
     const prevStyles = prevDescriptor.styles || []
     const nextStyles = descriptor.styles || []
     // style scope
@@ -227,7 +227,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
         if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
           notify({
             type: 'vue-style-update',
-            path: servedPath,
+            path: publicPath,
             index: i,
             id: `${styleId}-${i}`,
             timestamp
@@ -239,7 +239,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
     prevStyles.slice(nextStyles.length).forEach((_, i) => {
       notify({
         type: 'vue-style-remove',
-        path: servedPath,
+        path: publicPath,
         id: `${styleId}-${i + nextStyles.length}`,
         timestamp
       })
@@ -248,13 +248,13 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
     if (needReload) {
       notify({
         type: 'vue-reload',
-        path: servedPath,
+        path: publicPath,
         timestamp
       })
     } else if (needRerender) {
       notify({
         type: 'vue-rerender',
-        path: servedPath,
+        path: publicPath,
         timestamp
       })
     }
@@ -262,6 +262,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
 }
 
 function isEqual(a: SFCBlock | null, b: SFCBlock | null) {
+  if (!a && !b) return true
   if (!a || !b) return false
   if (a.content !== b.content) return false
   const keysA = Object.keys(a.attrs)
