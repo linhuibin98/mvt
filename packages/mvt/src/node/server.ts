@@ -4,7 +4,7 @@ import chokidar, { FSWatcher } from 'chokidar'
 import { createResolver } from './resolver'
 
 import { hmrPlugin } from './serverPluginHmr'
-import { moduleResolverPlugin } from './serverPluginModules'
+import { modulesPlugin } from './serverPluginModules'
 import { vuePlugin } from './serverPluginVue'
 import { servePlugin } from './serverPluginServe'
 
@@ -30,7 +30,7 @@ export interface ServerConfig {
 
 const internalPlugins: Plugin[] = [
   hmrPlugin,
-  moduleResolverPlugin,
+  modulesPlugin,
   vuePlugin,
   servePlugin
 ]

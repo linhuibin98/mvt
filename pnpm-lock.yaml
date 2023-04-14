@@ -27,6 +27,7 @@ importers:
       cssnano: ^6.0.0
       debug: ^4.3.4
       es-module-lexer: ^1.2.0
+      etag: ^1.8.1
       execa: ^4
       hash-sum: ^2.0.0
       jest: ^29.5.0
@@ -66,6 +67,7 @@ importers:
       cssnano: 6.0.0_postcss@8.4.21
       debug: 4.3.4
       es-module-lexer: 1.2.0
+      etag: 1.8.1
       hash-sum: 2.0.0
       koa: 2.14.1
       koa-conditional-get: 3.0.0
