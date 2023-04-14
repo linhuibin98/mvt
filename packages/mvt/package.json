@@ -1,5 +1,5 @@
 {
-  "name": "mvt",
+  "name": "@unbundle/mvt",
   "version": "0.5.2",
   "license": "MIT",
   "description": "bundle less",
@@ -87,5 +87,17 @@
     "rimraf": "^4.4.1",
     "typescript": "^5.0.2",
     "yorkie": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linhuibin98/unbundle.git"
+  },
+  "bugs": {
+    "url": "https://github.com/linhuibin98/unbundle/issues"
+  },
+  "homepage": "https://github.com/linhuibin98/unbundle/blob/main/packages/mvt/README.md",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   }
 }

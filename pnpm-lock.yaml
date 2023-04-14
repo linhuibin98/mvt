@@ -5,6 +5,9 @@ importers:
   .:
     specifiers: {}
 
+  packages/create-mvt-app:
+    specifiers: {}
+
   packages/mvt:
     specifiers:
       '@babel/parser': ^7.21.3

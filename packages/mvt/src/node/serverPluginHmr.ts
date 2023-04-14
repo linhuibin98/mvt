@@ -194,60 +194,48 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
     }
 
     // check which part of the file changed
+    let needReload = false
+    let needRerender = false
+
     if (!isEqual(descriptor.script, prevDescriptor.script)) {
-      notify({
-        type: 'vue-reload',
-        path: servedPath,
-        timestamp
-      })
-      return
+      needReload = true
     }
 
-    const prevStyles = prevDescriptor.styles || []
-    const nextStyles = descriptor.styles || []
-    // style scope
-    if (prevStyles.some((s) => s.scoped) !== nextStyles.some((s) => s.scoped)) {
-      notify({
-        type: 'vue-reload',
-        path: servedPath,
-        timestamp
-      })
-      return
+    if (!isEqual(descriptor.template, prevDescriptor.template)) {
+      needRerender = true
     }
 
     const styleId = hash(servedPath)
-    for (let i = 0; i < nextStyles.length; i++) {
-      // style module
-      if ((prevStyles[i]?.module || nextStyles[i]?.module) && !isEqual(prevStyles[i], nextStyles[i])) {
-        notify({
-          type: 'vue-reload',
-          path: servedPath,
-          timestamp
-        })
-        return
-      }
+    const prevStyles = prevDescriptor.styles || []
+    const nextStyles = descriptor.styles || []
+    // style scope
+    if (
+      prevStyles.some((s) => s.scoped) !== nextStyles.some((s) => s.scoped) ||
+      // TODO for now we force the component to reload on <style module> change
+      // but this should be optimizable to replace the __cssMoudles object
+      // on script and only trigger a rerender.
+      prevStyles.some((s) => s.module != null) ||
+      nextStyles.some((s) => s.module != null)
+    ) {
+      needReload = true
     }
 
-    nextStyles.forEach((_, i) => {
-      if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
-        notify({
-          type: 'vue-style-update',
-          path: servedPath,
-          index: i,
-          id: `${styleId}-${i}`,
-          timestamp
-        })
-      }
-    })
-
-    if (!isEqual(descriptor.template, prevDescriptor.template)) {
-      notify({
-        type: 'vue-rerender',
-        path: servedPath,
-        timestamp
+    // only need to update styles if not reloading, since reload forces
+    // style updates as well.
+    if (!needReload) {
+      nextStyles.forEach((_, i) => {
+        if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
+          notify({
+            type: 'vue-style-update',
+            path: servedPath,
+            index: i,
+            id: `${styleId}-${i}`,
+            timestamp
+          })
+        }
       })
     }
-
+    // stale styles always need to be removed
     prevStyles.slice(nextStyles.length).forEach((_, i) => {
       notify({
         type: 'vue-style-remove',
@@ -256,6 +244,20 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher }) => {
         timestamp
       })
     })
+
+    if (needReload) {
+      notify({
+        type: 'vue-reload',
+        path: servedPath,
+        timestamp
+      })
+    } else if (needRerender) {
+      notify({
+        type: 'vue-rerender',
+        path: servedPath,
+        timestamp
+      })
+    }
   }
 }
 

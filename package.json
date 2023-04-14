@@ -1,11 +1,11 @@
 {
-  "name": "mvt-workspace",
+  "name": "unbundle-workspace",
   "version": "1.0.0",
-  "description": "",
+  "description": "unbundle",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["nobundle"],
   "author": "",
   "license": "ISC"
 }
