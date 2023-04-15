@@ -54,6 +54,7 @@ export async function cachedRead(ctx: Context | null, file: string) {
     ctx.body = content
     ctx.status = 200
   }
+  return content
 }
 
 export function getIPv4AddressList(): string[] {

@@ -114,7 +114,7 @@ export async function parseSFC(
 
   if (!content) {
     try {
-      content = await fs.readFile(filename, 'utf-8')
+      content = await cachedRead(null, filename)
     } catch (e) {
       return
     }
