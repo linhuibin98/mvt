@@ -12,10 +12,8 @@ import LRUCache from 'lru-cache'
 import { hmrClientPublicPath } from './serverPluginHmr'
 import resolve from 'resolve-from'
 
-import type { Context } from 'koa'
 import type { Plugin } from './server'
 
-const getEtag = require('etag')
 const debug = require('debug')('mvt:sfc')
 
 interface CacheEntry {
@@ -55,6 +53,8 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
       return
     }
 
+    ctx.status = 200
+
     if (!query.type) {
       ctx.type = 'js'
       ctx.body = compileSFCMain(
@@ -69,13 +69,11 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     if (query.type === 'template') {
       ctx.type = 'js'
       ctx.body = compileSFCTemplate(
-        ctx,
         root,
         descriptor.template!,
         filePath,
         publicPath,
-        descriptor.styles.some((s) => s.scoped),
-        timestamp
+        descriptor.styles.some((s) => s.scoped)
       )
       return
     }
@@ -84,13 +82,11 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
       const index = Number(query.index)
       const styleBlock = descriptor.styles[index]
       const result = await compileSFCStyle(
-        ctx,
         root,
         styleBlock,
         index,
         filePath,
-        publicPath,
-        timestamp
+        publicPath
       )
       if (query.module != null) {
         ctx.type = 'js'
@@ -213,25 +209,17 @@ function compileSFCMain(
 }
 
 function compileSFCTemplate(
-  ctx: Context,
   root: string,
   template: SFCTemplateBlock,
   filePath: string,
   publicPath: string,
-  scoped: boolean,
-  timestamp: string | undefined
+  scoped: boolean
 ): string {
   let cached = vueCache.get(filePath)
   if (cached && cached.template) {
-    if (timestamp) {
-      ctx.status = 200
-    } else {
-      ctx.etag = getEtag(cached.template)
-    }
     return cached.template
   }
 
-  ctx.status = 200;
   const { code, errors } = resolveCompiler(root).compileTemplate({
     id: `data-v-${hash(filePath)}`,
     source: template.content,
@@ -253,26 +241,18 @@ function compileSFCTemplate(
 }
 
 async function compileSFCStyle(
-  ctx: Context,
   root: string,
   style: SFCStyleBlock,
   index: number,
   filePath: string,
-  publicPath: string,
-  timestamp: string | undefined
+  publicPath: string
 ): Promise<SFCStyleCompileResults> {
   let cached = vueCache.get(filePath)
   const cachedEntry = cached && cached.styles && cached.styles[index]
   if (cachedEntry) {
-    if (timestamp) {
-      ctx.status = 200
-    } else {
-      ctx.etag = getEtag(cachedEntry.code)
-    }
     return cachedEntry
   }
 
-  ctx.status = 200
   const id = hash(publicPath)
   const result = await resolveCompiler(root).compileStyleAsync({
     source: style.content,
