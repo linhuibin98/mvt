@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs'
 import {
   SFCDescriptor,
   SFCTemplateBlock,
@@ -12,9 +11,11 @@ import LRUCache from 'lru-cache'
 import { hmrClientPublicPath } from './serverPluginHmr'
 import resolve from 'resolve-from'
 
+import type { Context } from 'koa'
 import type { Plugin } from './server'
 
 const debug = require('debug')('mvt:sfc')
+const getEtag = require('etag')
 
 interface CacheEntry {
   descriptor?: SFCDescriptor
@@ -26,6 +27,13 @@ interface CacheEntry {
 export const vueCache = new LRUCache<string, CacheEntry>({
   max: 65535
 })
+
+const etagCacheCheck = (ctx: Context) => {
+  ctx.etag = getEtag(ctx.body)
+  if (ctx.etag !== ctx.get('If-None-Match')) {
+    ctx.status = 200
+  }
+}
 
 // Resolve the correct `vue` and `@vue.compiler-sfc` to use.
 // If the user project has local installations of these, they should be used;
@@ -42,9 +50,6 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     const timestamp = query.t as string
 
      // upstream plugins could've already read the file
-     if (!ctx.body) {
-      await cachedRead(ctx, filePath)
-    }
     const descriptor = await parseSFC(root, filePath, ctx.body)
 
     if (!descriptor) {
@@ -52,8 +57,6 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
       ctx.status = 404
       return
     }
-
-    ctx.status = 200
 
     if (!query.type) {
       ctx.type = 'js'
@@ -63,7 +66,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
         publicPath,
         timestamp
       )
-      return
+      return etagCacheCheck(ctx)
     }
 
     if (query.type === 'template') {
@@ -75,7 +78,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
         publicPath,
         descriptor.styles.some((s) => s.scoped)
       )
-      return
+      return etagCacheCheck(ctx)
     }
 
     if (query.type === 'style') {
@@ -95,7 +98,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
         ctx.type = 'css'
         ctx.body = result.code
       }
-      return
+      return etagCacheCheck(ctx)
     }
 
     // TODO custom blocks
