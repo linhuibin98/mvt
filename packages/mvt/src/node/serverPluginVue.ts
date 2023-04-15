@@ -34,7 +34,7 @@ export const vueCache = new LRUCache<string, CacheEntry>({
 // otherwise, fallback to the dependency of mvt itself.
 export const vuePlugin: Plugin = ({ root, app, resolver }) => {
   app.use(async (ctx, next) => {
-    if (!ctx.path.endsWith('.vue')) {
+    if (!ctx.path.endsWith('.vue') && !ctx.vue) {
       return next()
     }
 
@@ -43,7 +43,10 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     const filePath = resolver.publicToFile(publicPath)
     const timestamp = query.t as string
 
-    await cachedRead(ctx, filePath)
+     // upstream plugins could've already read the file
+     if (!ctx.body) {
+      await cachedRead(ctx, filePath)
+    }
     const descriptor = await parseSFC(root, filePath, ctx.body)
 
     if (!descriptor) {
@@ -141,11 +144,11 @@ export async function parseSFC(
 
 function compileSFCMain(
   descriptor: SFCDescriptor,
-  filename: string,
-  pathname: string,
+  filePath: string,
+  publicPath: string,
   timestamp: string | undefined
 ): string {
-  let cached = vueCache.get(filename)
+  let cached = vueCache.get(filePath)
   if (cached && cached.script) {
     return cached.script
   }
@@ -162,12 +165,12 @@ function compileSFCMain(
     code += `const __script = {}`
   }
 
-  const id = hash(pathname)
+  const id = hash(publicPath)
   let hasScoped = false
   let hasCSSModules = false
   if (descriptor.styles) {
     descriptor.styles.forEach((s, i) => {
-      const styleRequest = pathname + `?type=style&index=${i}${timestamp}`
+      const styleRequest = publicPath + `?type=style&index=${i}${timestamp}`
       if (s.scoped) hasScoped = true
       if (s.module) {
         if (!hasCSSModules) {
@@ -183,7 +186,7 @@ function compileSFCMain(
       }
 
       code += `\nupdateStyle("${id}-${i}", ${JSON.stringify(
-        pathname + `?type=style&index=${i}${timestamp}`
+        publicPath + `?type=style&index=${i}${timestamp}`
       )})`
     })
     if (hasScoped) {
@@ -193,18 +196,18 @@ function compileSFCMain(
 
   if (descriptor.template) {
     code += `\nimport { render as __render } from ${JSON.stringify(
-      pathname + `?type=template${timestamp}`
+      publicPath + `?type=template${timestamp}`
     )}`
     code += `\n__script.render = __render`
   }
 
-  code += `\n__script.__hmrId = ${JSON.stringify(pathname)}`
-  code += `\n__script.__file = ${JSON.stringify(filename)}`
+  code += `\n__script.__hmrId = ${JSON.stringify(publicPath)}`
+  code += `\n__script.__file = ${JSON.stringify(filePath)}`
   code += `\nexport default __script`
 
   cached = cached || { styles: [] }
   cached.script = code
-  vueCache.set(filename, cached)
+  vueCache.set(filePath, cached)
 
   return code
 }
@@ -213,12 +216,12 @@ function compileSFCTemplate(
   ctx: Context,
   root: string,
   template: SFCTemplateBlock,
-  filename: string,
-  pathname: string,
+  filePath: string,
+  publicPath: string,
   scoped: boolean,
   timestamp: string | undefined
 ): string {
-  let cached = vueCache.get(filename)
+  let cached = vueCache.get(filePath)
   if (cached && cached.template) {
     if (timestamp) {
       ctx.status = 200
@@ -230,12 +233,12 @@ function compileSFCTemplate(
 
   ctx.status = 200;
   const { code, errors } = resolveCompiler(root).compileTemplate({
-    id: `data-v-${hash(pathname)}`,
+    id: `data-v-${hash(filePath)}`,
     source: template.content,
-    filename,
+    filename: filePath,
     compilerOptions: {
       runtimeModuleName: '/@modules/vue',
-      scopeId: scoped ? `data-v-${hash(pathname)}` : null
+      scopeId: scoped ? `data-v-${hash(publicPath)}` : null
     }
   })
 
@@ -245,7 +248,7 @@ function compileSFCTemplate(
 
   cached = cached || { styles: [] }
   cached.template = code
-  vueCache.set(filename, cached)
+  vueCache.set(filePath, cached)
   return code
 }
 
@@ -254,11 +257,11 @@ async function compileSFCStyle(
   root: string,
   style: SFCStyleBlock,
   index: number,
-  filename: string,
-  pathname: string,
+  filePath: string,
+  publicPath: string,
   timestamp: string | undefined
 ): Promise<SFCStyleCompileResults> {
-  let cached = vueCache.get(filename)
+  let cached = vueCache.get(filePath)
   const cachedEntry = cached && cached.styles && cached.styles[index]
   if (cachedEntry) {
     if (timestamp) {
@@ -270,10 +273,10 @@ async function compileSFCStyle(
   }
 
   ctx.status = 200
-  const id = hash(pathname)
+  const id = hash(publicPath)
   const result = await resolveCompiler(root).compileStyleAsync({
     source: style.content,
-    filename,
+    filename: filePath,
     id: `data-v-${id}`,
     scoped: style.scoped != null,
     modules: style.module != null,
@@ -288,6 +291,6 @@ async function compileSFCStyle(
 
   cached = cached || { styles: [] }
   cached.styles[index] = result
-  vueCache.set(filename, cached)
+  vueCache.set(filePath, cached)
   return result
 }
