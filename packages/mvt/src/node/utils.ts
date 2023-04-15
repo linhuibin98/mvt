@@ -25,16 +25,16 @@ export async function cachedRead(ctx: Context | null, file: string) {
     ctx.type = path.basename(file)
   }
     
-  const reqCacheControl = ctx?.req.headers['cache-control']
   if (
-    reqCacheControl !== 'no-cache' &&
     cached &&
     cached.lastModified === lastModified
   ) {
     if (ctx) {
       ctx.etag = cached.etag
       ctx.lastModified = new Date(cached.lastModified)
-      ctx.status = 304
+      if (ctx.get('If-None-Match') === ctx.etag) {
+        ctx.status = 304
+      }
       // still set the content for *.vue requests
       ctx.body = cached.content
     }
