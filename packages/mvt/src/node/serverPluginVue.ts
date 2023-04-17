@@ -47,7 +47,6 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     const query = ctx.query
     const publicPath = ctx.path
     const filePath = resolver.publicToFile(publicPath)
-    const timestamp = query.t as string
 
      // upstream plugins could've already read the file
     const descriptor = await parseSFC(root, filePath, ctx.body)
@@ -63,8 +62,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
       ctx.body = compileSFCMain(
         descriptor,
         filePath,
-        publicPath,
-        timestamp
+        publicPath
       )
       return etagCacheCheck(ctx)
     }
@@ -144,15 +142,13 @@ export async function parseSFC(
 function compileSFCMain(
   descriptor: SFCDescriptor,
   filePath: string,
-  publicPath: string,
-  timestamp: string | undefined
+  publicPath: string
 ): string {
   let cached = vueCache.get(filePath)
   if (cached && cached.script) {
     return cached.script
   }
 
-  timestamp = timestamp ? `&t=${timestamp}` : ``
   // inject hmr client
   let code = `import { updateStyle } from "${hmrClientPublicPath}"\n`
   if (descriptor.script) {
@@ -169,7 +165,7 @@ function compileSFCMain(
   let hasCSSModules = false
   if (descriptor.styles) {
     descriptor.styles.forEach((s, i) => {
-      const styleRequest = publicPath + `?type=style&index=${i}${timestamp}`
+      const styleRequest = publicPath + `?type=style&index=${i}`
       if (s.scoped) hasScoped = true
       if (s.module) {
         if (!hasCSSModules) {
@@ -185,7 +181,7 @@ function compileSFCMain(
       }
 
       code += `\nupdateStyle("${id}-${i}", ${JSON.stringify(
-        publicPath + `?type=style&index=${i}${timestamp}`
+        publicPath + `?type=style&index=${i}`
       )})`
     })
     if (hasScoped) {
@@ -195,7 +191,7 @@ function compileSFCMain(
 
   if (descriptor.template) {
     code += `\nimport { render as __render } from ${JSON.stringify(
-      publicPath + `?type=template${timestamp}`
+      publicPath + `?type=template`
     )}`
     code += `\n__script.render = __render`
   }
