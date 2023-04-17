@@ -14,7 +14,7 @@ import { normalizePath } from '@rollup/pluginutils'
 import resolve from 'resolve-from'
 import { Resolver, createResolver } from './resolver'
 
-export interface BuildOptions {
+interface BuildOptionsBase {
   root?: string
   cdn?: boolean
   cssFileName?: string
@@ -28,6 +28,16 @@ export interface BuildOptions {
   silent?: boolean
 }
 
+interface SingleBuildOptions extends BuildOptionsBase {
+  rollupOutputOptions?: OutputOptions
+}
+
+interface MultiBuildOptions extends BuildOptionsBase {
+  rollupOutputOptions?: OutputOptions[]
+}
+
+export type BuildOptions = SingleBuildOptions | MultiBuildOptions
+
 export interface BuildResult {
   js: RollupOutput['output']
   css: string
@@ -37,6 +47,8 @@ export interface BuildResult {
 const debugBuild = require('debug')('mvt:build')
 const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
 
+export async function build(options: SingleBuildOptions): Promise<BuildResult>
+export async function build(options: MultiBuildOptions): Promise<BuildResult[]>
 export async function build({
   root = process.cwd(),
   cdn = resolveVue(root).hasLocalVue,
