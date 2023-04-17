@@ -50,7 +50,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     const publicPath = ctx.path
     const filePath = resolver.requestToFile(publicPath)
 
-     // upstream plugins could've already read the file
+    // upstream plugins could've already read the file
     const descriptor = await parseSFC(root, filePath, ctx.body)
 
     if (!descriptor) {
@@ -61,11 +61,7 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
 
     if (!query.type) {
       ctx.type = 'js'
-      ctx.body = compileSFCMain(
-        descriptor,
-        filePath,
-        publicPath
-      )
+      ctx.body = compileSFCMain(descriptor, filePath, publicPath)
       return etagCacheCheck(ctx)
     }
 
@@ -126,13 +122,16 @@ export async function parseSFC(
   if (typeof content !== 'string') {
     content = content.toString()
   }
-  
+
   const { descriptor, errors } = resolveCompiler(root).parse(content, {
     filename
   })
 
-  if (errors) {
-    // TODO
+  if (errors.length) {
+    errors.forEach((e) => {
+      console.error(`[mvt] SFC parse error: `, e)
+    })
+    console.error(`source:\n`, content)
   }
 
   cached = cached || { styles: [] }
@@ -231,8 +230,11 @@ function compileSFCTemplate(
     }
   })
 
-  if (errors) {
-    // TODO
+  if (errors.length) {
+    errors.forEach((e) => {
+      console.error(`[mvt] SFC template compilation error: `, e)
+    })
+    console.error(`source:\n`, template.content)
   }
 
   cached = cached || { styles: [] }
@@ -266,8 +268,11 @@ async function compileSFCStyle(
     // TODO load postcss config if present
   })
 
-  if (result.errors) {
-    // TODO
+  if (result.errors.length) {
+    result.errors.forEach((e) => {
+      console.error(`[mvt] SFC style compilation error: `, e)
+    })
+    console.error(`source:\n`, style.content)
   }
 
   cached = cached || { styles: [] }
