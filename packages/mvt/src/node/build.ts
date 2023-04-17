@@ -24,7 +24,7 @@ export interface BuildOptions {
   rollupOutputOptions?: OutputOptions
   write?: boolean // if false, does not write to disk.
   debug?: boolean // if true, generates non-minified code for inspection.
-  indexPath?: string // required if overwriting default input entry.
+  cssFileName?: string
 }
 
 export interface BuildResult {
@@ -44,7 +44,7 @@ export async function build({
   rollupOutputOptions = {},
   write = true,
   debug = false,
-  indexPath = path.resolve(root, 'index.html')
+  cssFileName = 'style.css'
 }: BuildOptions = {}) {
   process.env.NODE_ENV = 'production'
   const start = Date.now()
@@ -53,10 +53,16 @@ export async function build({
   // importing it just for the types
   const rollup = require('rollup').rollup as typeof Rollup
   const outDir = rollupOutputOptions.dir || path.resolve(root, 'dist')
-  const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
-  const indexContent = await fs.readFile(indexPath, 'utf-8')
 
-  const cssFilename = 'style.css'
+  const indexPath = path.resolve(root, 'index.html')
+  const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
+
+  let indexContent: string | null = null
+  try {
+    indexContent = await fs.readFile(indexPath, 'utf-8')
+  } catch (e) {
+    // no index
+  }
 
   // make sure to use the same verison of vue from the CDN.
   const vueVersion = resolveVue(root).version
@@ -137,7 +143,6 @@ export async function build({
 
   const bundle = await rollup({
     input: indexPath,
-    preserveEntrySignatures: false,
     ...rollupInputOptions,
     plugins: [
       ...(Array.isArray(userPlugins) ? userPlugins : userPlugins ? [userPlugins] : []),
@@ -221,10 +226,10 @@ export async function build({
   }
 
   // inject css link
-  generatedIndex = injectCSS(generatedIndex, cssFilename)
+  generatedIndex = injectCSS(generatedIndex, cssFileName)
   if (write) {
     // write css
-    const cssFilepath = path.join(outDir, cssFilename)
+    const cssFilepath = path.join(outDir, cssFileName)
     console.log(
       `write ${chalk.magenta(path.relative(process.cwd(), cssFilepath))}`
     )
