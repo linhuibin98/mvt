@@ -18,17 +18,19 @@ export interface BuildOptions {
   root?: string
   cdn?: boolean
   resolvers?: Resolver[]
+  // list files that are included in the build, but not inside project root.
   srcRoots?: string[]
   rollupInputOptions?: InputOptions
   rollupOutputOptions?: OutputOptions
-  write?: boolean
-  debug?: boolean
-  indexPath?: string
+  write?: boolean // if false, does not write to disk.
+  debug?: boolean // if true, generates non-minified code for inspection.
+  indexPath?: string // required if overwriting default input entry.
 }
 
 export interface BuildResult {
-  output: RollupOutput['output']
+  js: RollupOutput['output']
   css: string
+  html: string
 }
 
 const debugBuild = require('debug')('mvt:build')
@@ -52,7 +54,7 @@ export async function build({
   const rollup = require('rollup').rollup as typeof Rollup
   const outDir = rollupOutputOptions.dir || path.resolve(root, 'dist')
   const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
-  let indexContent = await fs.readFile(indexPath, 'utf-8')
+  const indexContent = await fs.readFile(indexPath, 'utf-8')
 
   const cssFilename = 'style.css'
 
@@ -131,14 +133,14 @@ export async function build({
     }
   }
 
-  const userPlugins = await Promise.resolve(() => rollupInputOptions.plugins)
+  const userPlugins = await Promise.resolve(rollupInputOptions.plugins)
 
   const bundle = await rollup({
     input: indexPath,
     preserveEntrySignatures: false,
     ...rollupInputOptions,
     plugins: [
-      ...(Array.isArray(userPlugins) ? userPlugins : [userPlugins]),
+      ...(Array.isArray(userPlugins) ? userPlugins : userPlugins ? [userPlugins] : []),
       mvtPlugin,
       require('rollup-plugin-vue')({
         // TODO: for now we directly handle pre-processors in rollup-plugin-vue
@@ -188,39 +190,38 @@ export async function build({
     ).css
   }
 
-  // if no custom input, this is a default build with index.html as entry.
-  // directly write to disk.
+  let generatedIndex = indexContent.replace(scriptRE, '').trim()
+  // TODO handle public path for injections?
+  // this would also affect paths in templates and css.
+  if (cdn) {
+    // if not inlining vue, inject cdn link so it can start the fetch early
+    generatedIndex = injectScript(generatedIndex, cdnLink)
+  }
+
   if (write) {
     if (existsSync(outDir)) {
       await fs.rm(outDir, { recursive: true })
     }
     await fs.mkdir(outDir, { recursive: true })
+  }
 
-    let generatedIndex = indexContent.replace(scriptRE, '').trim()
-    // TODO handle public path for injections?
-    // this would also affect paths in templates and css.
-    // inject css link
-    generatedIndex = injectCSS(generatedIndex, cssFilename)
-    if (cdn) {
-      // if not inlining vue, inject cdn link so it can start the fetch early
-      generatedIndex = injectScript(generatedIndex, cdnLink)
-    }
-    // write javascript chunks
-    for (const chunk of output) {
-      if (chunk.type === 'chunk') {
-        if (chunk.isEntry) {
-          // inject chunk to html
-          generatedIndex = injectScript(generatedIndex, chunk.fileName)
-        }
-        // write chunk
-        const filepath = path.join(outDir, chunk.fileName)
-        console.log(
-          `write ${chalk.cyan(path.relative(process.cwd(), filepath))}`
-        )
-        await fs.writeFile(filepath, chunk.code)
+  // inject / write javascript chunks
+  for (const chunk of output) {
+    if (chunk.type === 'chunk') {
+      if (chunk.isEntry) {
+        // inject chunk to html
+        generatedIndex = injectScript(generatedIndex, chunk.fileName)
       }
+      // write chunk
+      const filepath = path.join(outDir, chunk.fileName)
+      console.log(`write ${chalk.cyan(path.relative(process.cwd(), filepath))}`)
+      await fs.writeFile(filepath, chunk.code)
     }
+  }
 
+  // inject css link
+  generatedIndex = injectCSS(generatedIndex, cssFilename)
+  if (write) {
     // write css
     const cssFilepath = path.join(outDir, cssFilename)
     console.log(
@@ -234,12 +235,12 @@ export async function build({
       `write ${chalk.green(path.relative(process.cwd(), indexOutPath))}`
     )
     await fs.writeFile(indexOutPath, generatedIndex)
-
-    console.log(`done in ${((Date.now() - start) / 1000).toFixed(2)}s.`)
   }
+  console.log(`done in ${((Date.now() - start) / 1000).toFixed(2)}s.`)
 
   return {
-    output,
+    js: output,
+    html: generatedIndex,
     css
   }
 }
