@@ -2,7 +2,7 @@
   <div :class="$style.demo">
     <div>
       count: {{ count }}
-      <button @click="increase">+11</button>
+      <button @click="increase">+1</button>
     </div>
   </div>
 </template>
