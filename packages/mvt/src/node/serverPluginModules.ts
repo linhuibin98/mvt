@@ -12,6 +12,7 @@ import { parse } from '@babel/parser'
 import { StringLiteral } from '@babel/types'
 import LRUCache from 'lru-cache'
 import chalk from 'chalk'
+import slash from 'slash'
 
 import type { InternalResolver } from './resolver'
 import type { Plugin } from './server'
@@ -257,13 +258,13 @@ function rewriteImports(
       imports.forEach(({ s: start, e: end, d: dynamicIndex }) => {
         const id = source.substring(start, end)
         if (dynamicIndex === -1) {
+          let resolved
           if (/^[^\/\.]/.test(id)) {
-            const rewritten = resolver.idToRequest(id) || `/@modules/${id}`
-            s.overwrite(start, end, rewritten)
-            hasReplaced = true
-            debugImportRewrite(` "${id}" --> "${rewritten}"`)
-          } else if (id === hmrClientPublicPath) {
-            if (!/.vue$|.vue\?type=/.test(importer)) {
+            resolved = resolver.idToRequest(id) || `/@modules/${id}`
+            if (
+              resolved === hmrClientPublicPath &&
+              !/.vue$|.vue\?type=/.test(importer)
+            ) {
               // the user explicit imports the HMR API in a js file
               // making the module hot.
               parseAcceptedDeps(source, importer, s)
@@ -285,24 +286,25 @@ function rewriteImports(
             if (timestamp) {
               query += `${query ? `&` : `?`}t=${timestamp}`
             }
-            const resolved = pathname + query
-            if (resolved !== id) {
-              debugImportRewrite(`    "${id}" --> "${resolved}"`)
-              s.overwrite(start, end, resolved)
-              hasReplaced = true
-            }
-            // save the import chain for hmr analysis
-            const importee = path.join(path.dirname(importer), resolved)
-            currentImportees.add(importee)
-            debugHmr(`importer: ${importer}, importee: ${importee}`)
-            ensureMapEntry(importerMap, importee).add(importer)
+            resolved = pathname + query
           }
+
+          if (resolved !== id) {
+            debugImportRewrite(`    "${id}" --> "${resolved}"`)
+            s.overwrite(start, end, resolved)
+            hasReplaced = true
+          }
+          // save the import chain for hmr analysis
+          const importee = slash(path.resolve(path.dirname(importer), resolved))
+          currentImportees.add(importee)
+          debugHmr(`        ${importer} imports ${importee}`)
+          ensureMapEntry(importerMap, importee).add(importer)
         } else if (dynamicIndex >= 0) {
           // TODO dynamic import
           debugImportRewrite(` dynamic import "${id}" (ignored)`)
         }
       })
-      
+
       // since the importees may have changed due to edits,
       // check if we need to remove this importer from certain importees
       if (prevImportees) {

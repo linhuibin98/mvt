@@ -52,7 +52,8 @@ export const debugHmr = require('debug')('mvt:hmr')
 
 // client and node files are placed flat in the dist folder
 export const hmrClientFilePath = path.resolve(__dirname, './client.js')
-export const hmrClientPublicPath = '/@hmr'
+export const hmrClientId = '@hmr'
+export const hmrClientPublicPath = `/${hmrClientId}`
 
 export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
   app.use(async (ctx, next) => {
