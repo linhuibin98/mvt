@@ -3,18 +3,46 @@ import { promises as fs, existsSync } from 'fs'
 import { resolveVue } from './resolveVue'
 import { hmrClientId } from './serverPluginHmr'
 import chalk from 'chalk'
-import { rollup as Rollup, Plugin } from 'rollup'
+import {
+  rollup as Rollup,
+  Plugin,
+  InputOptions,
+  OutputOptions,
+  RollupOutput
+} from 'rollup'
 import { normalizePath } from '@rollup/pluginutils'
 import resolve from 'resolve-from'
+import { Resolver, createResolver } from './resolver'
 
 export interface BuildOptions {
   root?: string
   cdn?: boolean
+  resolvers?: Resolver[]
+  srcRoots?: string[]
+  rollupInputOptions?: InputOptions
+  rollupOutputOptions?: OutputOptions
+  write?: boolean
+  debug?: boolean
+  indexPath?: string
 }
+
+export interface BuildResult {
+  output: RollupOutput['output']
+  css: string
+}
+
+const debugBuild = require('debug')('mvt:build')
 
 export async function build({
   root = process.cwd(),
-  cdn = resolveVue(root).hasLocalVue
+  cdn = resolveVue(root).hasLocalVue,
+  resolvers = [],
+  srcRoots = [],
+  rollupInputOptions = {},
+  rollupOutputOptions = {},
+  write = true,
+  debug = false,
+  indexPath = path.resolve(root, 'index.html')
 }: BuildOptions = {}) {
   process.env.NODE_ENV = 'production'
   const start = Date.now()
@@ -22,10 +50,9 @@ export async function build({
   // lazy require rollup so that we don't load it when only using the dev server
   // importing it just for the types
   const rollup = require('rollup').rollup as typeof Rollup
-  const outDir = path.resolve(root, 'dist')
-  const indexPath = path.resolve(root, 'index.html')
+  const outDir = rollupOutputOptions.dir || path.resolve(root, 'dist')
   const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
-  const indexContent = await fs.readFile(indexPath, 'utf-8')
+  let indexContent = await fs.readFile(indexPath, 'utf-8')
 
   const cssFilename = 'style.css'
 
@@ -33,13 +60,23 @@ export async function build({
   const vueVersion = resolveVue(root).version
   const cdnLink = `https://unpkg.com/vue@${vueVersion}/dist/vue.esm-browser.prod.js`
 
+  const resolver = createResolver(root, resolvers)
+  srcRoots.push(root)
+
   const mvtPlugin: Plugin = {
     name: 'mvt',
     resolveId(id) {
       if (id === hmrClientId) {
         return hmrClientId
       } else if (id.startsWith('/')) {
-        return id.startsWith(root) ? id : path.resolve(root, id.slice(1))
+        // if id starts with any of the src root directories, it's a file request
+        if (srcRoots.some((root) => id.startsWith(root))) {
+          debugBuild(`[resolve] pass `, id)
+          return
+        } else {
+          debugBuild(`[resolve]`, id, `-->`, resolver.requestToFile(id))
+          return resolver.requestToFile(id)
+        }
       } else if (id === 'vue') {
         if (cdn) {
           return resolveVue(root, true).vue
@@ -48,6 +85,19 @@ export async function build({
             id: cdnLink,
             external: true
           }
+        }
+      } else {
+        const request = resolver.idToRequest(id)
+        if (request) {
+          debugBuild(
+            `[resolve]`,
+            id,
+            `-->`,
+            request,
+            `--> `,
+            resolver.requestToFile(request)
+          )
+          return resolver.requestToFile(request)
         }
       }
     },
@@ -81,10 +131,14 @@ export async function build({
     }
   }
 
+  const userPlugins = await Promise.resolve(() => rollupInputOptions.plugins)
+
   const bundle = await rollup({
     input: indexPath,
     preserveEntrySignatures: false,
+    ...rollupInputOptions,
     plugins: [
+      ...(Array.isArray(userPlugins) ? userPlugins : [userPlugins]),
       mvtPlugin,
       require('rollup-plugin-vue')({
         // TODO: for now we directly handle pre-processors in rollup-plugin-vue
@@ -105,78 +159,93 @@ export async function build({
         }
       }),
       cssExtractPlugin,
-      require('rollup-plugin-terser').terser()
-    ]
+      ...(debug ? [] : [require('rollup-plugin-terser').terser()])
+    ],
+    onwarn(warning, warn) {
+      if (warning.code !== 'CIRCULAR_DEPENDENCY') {
+        warn(warning)
+      }
+    }
   })
-
-  if (existsSync(outDir)) {
-    await fs.rm(outDir, { recursive: true })
-  }
-  await fs.mkdir(outDir, { recursive: true })
 
   const { output } = await bundle.generate({
     dir: outDir,
-    format: 'es'
+    format: 'es',
+    ...rollupOutputOptions
   })
 
-  let generatedIndex = indexContent.replace(scriptRE, '').trim()
-
-  // TODO handle public path for injections?
-  // this would also affect paths in templates and css.
-
-  // inject css link
-  generatedIndex = injectCSS(generatedIndex, cssFilename)
-
-  // write css
+  // finalize extracted css
   let css = ''
   styles.forEach((s) => {
     css += s
   })
-  const cssFilepath = path.join(outDir, cssFilename)
-  console.log(
-    `write ${chalk.magenta(path.relative(process.cwd(), cssFilepath))}`
-  )
-  await fs.writeFile(
-    cssFilepath,
-    // minify with cssnano
-    (
+  // minify with cssnano
+  if (!debug) {
+    css = (
       await require('postcss')([require('cssnano')]).process(css, {
         from: undefined
       })
     ).css
-  )
-
-  if (!cdn) {
-    // if not inlining vue, inject cdn link so it can start the fetch early
-    generatedIndex = injectScript(generatedIndex, cdnLink)
   }
 
-  // inject chunks
-  for (const chunk of output) {
-    if (chunk.type === 'chunk') {
-      if (chunk.isEntry) {
-        // inject chunk to html
-        generatedIndex = injectScript(generatedIndex, chunk.fileName)
-      }
-      // write chunk
-      const filepath = path.join(outDir, chunk.fileName)
-      console.log(`write ${chalk.cyan(path.relative(process.cwd(), filepath))}`)
-      await fs.writeFile(filepath, chunk.code)
+  // if no custom input, this is a default build with index.html as entry.
+  // directly write to disk.
+  if (write) {
+    if (existsSync(outDir)) {
+      await fs.rm(outDir, { recursive: true })
     }
+    await fs.mkdir(outDir, { recursive: true })
+
+    let generatedIndex = indexContent.replace(scriptRE, '').trim()
+    // TODO handle public path for injections?
+    // this would also affect paths in templates and css.
+    // inject css link
+    generatedIndex = injectCSS(generatedIndex, cssFilename)
+    if (cdn) {
+      // if not inlining vue, inject cdn link so it can start the fetch early
+      generatedIndex = injectScript(generatedIndex, cdnLink)
+    }
+    // write javascript chunks
+    for (const chunk of output) {
+      if (chunk.type === 'chunk') {
+        if (chunk.isEntry) {
+          // inject chunk to html
+          generatedIndex = injectScript(generatedIndex, chunk.fileName)
+        }
+        // write chunk
+        const filepath = path.join(outDir, chunk.fileName)
+        console.log(
+          `write ${chalk.cyan(path.relative(process.cwd(), filepath))}`
+        )
+        await fs.writeFile(filepath, chunk.code)
+      }
+    }
+
+    // write css
+    const cssFilepath = path.join(outDir, cssFilename)
+    console.log(
+      `write ${chalk.magenta(path.relative(process.cwd(), cssFilepath))}`
+    )
+    await fs.writeFile(cssFilepath, css)
+
+    // write html
+    const indexOutPath = path.join(outDir, 'index.html')
+    console.log(
+      `write ${chalk.green(path.relative(process.cwd(), indexOutPath))}`
+    )
+    await fs.writeFile(indexOutPath, generatedIndex)
+
+    console.log(`done in ${((Date.now() - start) / 1000).toFixed(2)}s.`)
   }
 
-  // write html
-  const indexOutPath = path.join(outDir, 'index.html')
-  console.log(
-    `write ${chalk.green(path.relative(process.cwd(), indexOutPath))}`
-  )
-  await fs.writeFile(indexOutPath, generatedIndex)
-
-  console.log(`done in ${((Date.now() - start) / 1000).toFixed(2)}s.`)
+  return {
+    output,
+    css
+  }
 }
 
 function injectCSS(html: string, filename: string) {
-  const tag = `<link rel="stylesheet" href="/${filename}">`
+  const tag = `<link rel="stylesheet" href="./${filename}">`
   if (/<\/head>/.test(html)) {
     return html.replace(/<\/head>/, `${tag}\n</head>`)
   } else {
@@ -185,7 +254,7 @@ function injectCSS(html: string, filename: string) {
 }
 
 function injectScript(html: string, filename: string) {
-  filename = /^https?:\/\//.test(filename) ? filename : `/${filename}`
+  filename = /^https?:\/\//.test(filename) ? filename : `./${filename}`
   const tag = `<script type="module" src="${filename}"></script>`
   if (/<\/body>/.test(html)) {
     return html.replace(/<\/body>/, `${tag}\n</body>`)
