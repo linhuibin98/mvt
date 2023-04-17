@@ -9,7 +9,7 @@ import { cachedRead } from './utils'
 import { promises as fs } from 'fs'
 import { hmrClientPublicPath, debugHmr } from './serverPluginHmr'
 import { parse } from '@babel/parser'
-import { StringLiteral } from '@babel/types'
+import { StringLiteral, Statement, Expression } from '@babel/types'
 import LRUCache from 'lru-cache'
 import chalk from 'chalk'
 import slash from 'slash'
@@ -356,20 +356,20 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
     const deps = ensureMapEntry(hmrBoundariesMap, importer)
     const depPublicPath = slash(path.resolve(path.dirname(importer), e.value))
     deps.add(depPublicPath)
+    debugHmr(` ${importer} accepts ${depPublicPath}`)
     s.overwrite(e.start!, e.end!, JSON.stringify(depPublicPath))
   }
 
-  ast.forEach((node) => {
+  const checkAcceptCall = (node: Expression) => {
     if (
-      node.type === 'ExpressionStatement' &&
-      node.expression.type === 'CallExpression' &&
-      node.expression.callee.type === 'MemberExpression' &&
-      node.expression.callee.object.type === 'Identifier' &&
-      node.expression.callee.object.name === 'hot' &&
-      node.expression.callee.property.type === 'Identifier' &&
-      node.expression.callee.property.name === 'accept'
+      node.type === 'CallExpression' &&
+      node.callee.type === 'MemberExpression' &&
+      node.callee.object.type === 'Identifier' &&
+      node.callee.object.name === 'hot' &&
+      node.callee.property.type === 'Identifier' &&
+      node.callee.property.name === 'accept'
     ) {
-      const args = node.expression.arguments
+      const args = node.arguments
       // inject the imports's own path so it becomes
       // hot.accept('/foo.js', ['./bar.js'], () => {})
       s.appendLeft(args[0].start!, JSON.stringify(importer) + ', ')
@@ -392,5 +392,36 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
         )
       }
     }
-  })
+  }
+
+  const checkStatements = (node: Statement) => {
+    if (node.type === 'ExpressionStatement') {
+      // top level hot.accept() call
+      checkAcceptCall(node.expression)
+      // __DEV && hot.accept
+      if (
+        node.expression.type === 'LogicalExpression' &&
+        node.expression.operator === '&&' &&
+        node.expression.left.type === 'Identifier' &&
+        node.expression.left.name === '__DEV__'
+      ) {
+        checkAcceptCall(node.expression.right)
+      }
+    }
+    // if (__DEV__) ...
+    if (
+      node.type === 'IfStatement' &&
+      node.test.type === 'Identifier' &&
+      node.test.name === '__DEV__'
+    ) {
+      if (node.consequent.type === 'BlockStatement') {
+        node.consequent.body.forEach(checkStatements)
+      }
+      if (node.consequent.type === 'ExpressionStatement') {
+        checkAcceptCall(node.consequent.expression)
+      }
+    }
+  }
+
+  ast.forEach(checkStatements)
 }
