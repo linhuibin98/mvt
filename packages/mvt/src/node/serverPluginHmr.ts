@@ -5,7 +5,7 @@
 //    we also record the importer/importee relationships which can be used for
 //    HMR analysis (we do both at the same time to avoid double parse costs)
 // 3. When a `.vue` file changes, we directly read, parse it again and
-//    notify the client because Vue components are self-accepting by nature
+//    send the client because Vue components are self-accepting by nature
 // 4. When a js file changes, it triggers an HMR graph analysis, where we try to
 //    walk its importer chains and see if we reach a "HMR boundary". An HMR
 //    boundary is either a `.vue` file or a `.js` file that explicitly indicated
@@ -17,7 +17,7 @@
 //    child importer is in the accepted list of the boundary (see additional
 //    explanation below). If yes, record current child importer in the
 //    `jsImporters` Set.
-// 8. If the graph walk finished without running into dead ends, notify the
+// 8. If the graph walk finished without running into dead ends, send the
 //    client to update all `jsImporters` and `vueImporters`.
 
 // How do we get a js HMR boundary's accepted list on the server
@@ -38,7 +38,14 @@ import chalk from 'chalk'
 import { normalizePath } from '@rollup/pluginutils'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
+import type { FSWatcher } from 'chokidar'
 import type { Plugin } from './server'
+
+export type HMRWatcher = FSWatcher & {
+  handleVueReload: (file: string, timestamp?: number, content?: string) => void
+  handleJSReload: (file: string, timestamp?: number) => void
+  send: (payload: HMRPayload) => void
+}
 
 export interface HMRPayload {
   type: string
@@ -46,6 +53,7 @@ export interface HMRPayload {
   path?: string
   index?: number
   id?: string
+  customData?: any
 }
 
 export const debugHmr = require('debug')('mvt:hmr')
@@ -85,11 +93,15 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     }
   })
 
-  const notify = (payload: HMRPayload) => {
+  const send = (payload: HMRPayload) => {
     const stringified = JSON.stringify(payload, null, 2)
     debugHmr(`update: ${stringified}`)
     sockets.forEach((s) => s.send(stringified))
   }
+
+  watcher.handleVueReload = handleVueReload
+  watcher.handleJSReload = handleJSReload
+  watcher.send = send
 
   watcher.on('change', async (file) => {
     file = normalizePath(file)
@@ -100,9 +112,6 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
       handleJSReload(file, timestamp)
     }
   })
-
-  watcher.handleVueReload = handleVueReload
-  watcher.handleJSReload = handleJSReload
 
   async function handleVueReload(
     file: string,
@@ -159,7 +168,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     if (!needReload) {
       nextStyles.forEach((_, i) => {
         if (!prevStyles[i] || !isEqual(prevStyles[i], nextStyles[i])) {
-          notify({
+          send({
             type: 'vue-style-update',
             path: publicPath,
             index: i,
@@ -171,7 +180,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     }
     // stale styles always need to be removed
     prevStyles.slice(nextStyles.length).forEach((_, i) => {
-      notify({
+      send({
         type: 'vue-style-remove',
         path: publicPath,
         id: `${styleId}-${i + nextStyles.length}`,
@@ -180,13 +189,13 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     })
 
     if (needReload) {
-      notify({
+      send({
         type: 'vue-reload',
         path: publicPath,
         timestamp
       })
     } else if (needRerender) {
-      notify({
+      send({
         type: 'vue-rerender',
         path: publicPath,
         timestamp
@@ -209,13 +218,13 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
       )
 
       if (hasDeadEnd) {
-        notify({
+        send({
           type: 'full-reload',
           timestamp
         })
       } else {
         vueImporters.forEach((vueImporter) => {
-          notify({
+          send({
             type: 'vue-reload',
             path: vueImporter,
             timestamp
@@ -223,7 +232,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
         })
 
         jsHotImporters.forEach((jsImporter) => {
-          notify({
+          send({
             type: 'js-update',
             path: jsImporter,
             timestamp

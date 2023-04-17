@@ -1,9 +1,9 @@
 import http, { Server } from 'http'
 import Koa from 'koa'
-import chokidar, { FSWatcher } from 'chokidar'
+import chokidar from 'chokidar'
 import { createResolver } from './resolver'
 
-import { hmrPlugin } from './serverPluginHmr'
+import { hmrPlugin, HMRWatcher } from './serverPluginHmr'
 import { modulesPlugin } from './serverPluginModules'
 import { vuePlugin } from './serverPluginVue'
 import { servePlugin } from './serverPluginServe'
@@ -12,16 +12,11 @@ import type { Resolver, InternalResolver } from './resolver'
 
 export { Resolver }
 
-export type MvtWatcher = FSWatcher & {
-  handleVueReload: (file: string, timestamp?: number, content?: string) => void
-  handleJSReload: (file: string, timestamp?: number) => void
-}
-
 export interface PluginContext {
   root: string
   app: Koa
   server: Server
-  watcher: MvtWatcher
+  watcher: HMRWatcher
   resolver: InternalResolver
 }
 
@@ -46,7 +41,7 @@ export function createServer(config: ServerConfig = {}): Server {
   const server = http.createServer(app.callback())
   const watcher = chokidar.watch(root, {
     ignored: [/node_modules/]
-  }) as MvtWatcher
+  }) as HMRWatcher
   const resolver = createResolver(root, resolvers)
 
   ;[...plugins, ...internalPlugins].forEach((m) =>

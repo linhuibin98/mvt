@@ -9,7 +9,7 @@ const socket = new WebSocket(`ws://${location.host}`)
 
 // Listen for messages
 socket.addEventListener('message', ({ data }) => {
-  const { type, path, index, id, timestamp } = JSON.parse(data)
+  const { type, path, index, id, timestamp, customData } = JSON.parse(data)
   switch (type) {
     case 'connected':
       console.log(`[mvt] connected.`)
@@ -47,6 +47,12 @@ socket.addEventListener('message', ({ data }) => {
         )
       }
       break
+    case 'custom':
+      const cbs = customUpdateMap.get(id)
+      if (cbs) {
+        cbs.forEach((cb) => cb(customData))
+      }
+      break
     case 'full-reload':
       location.reload()
   }
@@ -77,6 +83,7 @@ export function updateStyle(id: string, url: string) {
 }
 
 const jsUpdateMap = new Map<string, (timestamp: number) => void>()
+const customUpdateMap = new Map<string, ((customData: any) => void)[]>()
 
 export const hot = {
   accept(
@@ -93,5 +100,10 @@ export const hot = {
         import(deps + `?t=${timestamp}`).then(callback)
       }
     })
+  },
+  on(event: string, cb: () => void) {
+    const exisitng = customUpdateMap.get(event) || []
+    exisitng.push(cb)
+    customUpdateMap.set(event, exisitng)
   }
 }
