@@ -13,6 +13,7 @@ import { StringLiteral } from '@babel/types'
 import LRUCache from 'lru-cache'
 import chalk from 'chalk'
 
+import type { InternalResolver } from './resolver'
 import type { Plugin } from './server'
 
 const debugImportRewrite = require('debug')('mvt:rewrite')
@@ -50,7 +51,11 @@ export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
         ctx.body = html.replace(
           /(<script\b[^>]*>)([\s\S]*?)<\/script>/gm,
           (_, openTag, script) => {
-            return `${openTag}${rewriteImports(script, '/index.html')}</script>`
+            return `${openTag}${rewriteImports(
+              script,
+              '/index.html',
+              resolver
+            )}</script>`
           }
         )
         rewriteCache.set('/index.html', ctx.body)
@@ -76,6 +81,7 @@ export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
         ctx.body = rewriteImports(
           await readBody(ctx.body),
           ctx.url.replace(/(&|\?)t=\d+/, ''),
+          resolver,
           ctx.query.t as string
         )
         rewriteCache.set(ctx.url, ctx.body)
@@ -227,7 +233,12 @@ const ensureMapEntry = (map: HMRStateMap, key: string): Set<string> => {
   return entry
 }
 
-function rewriteImports(source: string, importer: string, timestamp?: string) {
+function rewriteImports(
+  source: string,
+  importer: string,
+  resolver: InternalResolver,
+  timestamp?: string
+) {
   if (typeof source !== 'string') {
     source = String(source)
   }
@@ -247,7 +258,7 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
         const id = source.substring(start, end)
         if (dynamicIndex === -1) {
           if (/^[^\/\.]/.test(id)) {
-            const rewritten = `/@modules/${id}`
+            const rewritten = resolver.idToRequest(id) || `/@modules/${id}`
             s.overwrite(start, end, rewritten)
             hasReplaced = true
             debugImportRewrite(` "${id}" --> "${rewritten}"`)
@@ -274,7 +285,7 @@ function rewriteImports(source: string, importer: string, timestamp?: string) {
             if (timestamp) {
               query += `${query ? `&` : `?`}=${timestamp}`
             }
-            const resolved = pathname + query;
+            const resolved = pathname + query
             if (resolved !== id) {
               debugImportRewrite(`    "${id}" --> "${resolved}"`)
               s.overwrite(start, end, resolved)
