@@ -1,10 +1,10 @@
 import path from 'pathe'
 import { promises as fs, existsSync } from 'fs'
 import { resolveVue } from './resolveVue'
-import { hmrClientPublicPath } from './serverPluginHmr'
+import { hmrClientId } from './serverPluginHmr'
 import chalk from 'chalk'
 import { rollup as Rollup, Plugin } from 'rollup'
-import {normalizePath} from '@rollup/pluginutils';
+import { normalizePath } from '@rollup/pluginutils'
 import resolve from 'resolve-from'
 
 export interface BuildOptions {
@@ -36,12 +36,10 @@ export async function build({
   const mvtPlugin: Plugin = {
     name: 'mvt',
     resolveId(id) {
-      if (id.startsWith('/')) {
-        if (id === hmrClientPublicPath) {
-          return hmrClientPublicPath
-        } else {
-          return id.startsWith(root) ? id : path.resolve(root, id.slice(1))
-        }
+      if (id === hmrClientId) {
+        return hmrClientId
+      } else if (id.startsWith('/')) {
+        return id.startsWith(root) ? id : path.resolve(root, id.slice(1))
       } else if (id === 'vue') {
         if (cdn) {
           return resolveVue(root, true).vue
@@ -54,9 +52,9 @@ export async function build({
       }
     },
     load(id) {
-      id = normalizePath(id);
-      if (id === hmrClientPublicPath) {
-        return `export function hot() {}`
+      id = normalizePath(id)
+      if (id === hmrClientId) {
+        return `export const hot = {}`
       } else if (id === indexPath) {
         let script = ''
         let match
@@ -102,7 +100,8 @@ export async function build({
       require('@rollup/plugin-replace')({
         preventAssignment: true,
         values: {
-          'process.env.NODE_ENV': '"production"'
+          'process.env.NODE_ENV': '"production"',
+          __DEV__: 'false'
         }
       }),
       cssExtractPlugin,
