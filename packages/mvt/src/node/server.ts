@@ -12,7 +12,7 @@ import type { Resolver, InternalResolver } from './resolver'
 
 export { Resolver }
 
-export type ViteWatcher = FSWatcher & {
+export type MvtWatcher = FSWatcher & {
   handleVueReload: (file: string, timestamp: number, content?: string) => void
   handleJSReload: (file: string, timestamp: number) => void
 }
@@ -21,7 +21,7 @@ export interface PluginContext {
   root: string
   app: Koa
   server: Server
-  watcher: ViteWatcher
+  watcher: MvtWatcher
   resolver: InternalResolver
 }
 
@@ -46,7 +46,7 @@ export function createServer(config: ServerConfig = {}): Server {
   const server = http.createServer(app.callback())
   const watcher = chokidar.watch(root, {
     ignored: [/node_modules/]
-  }) as ViteWatcher
+  }) as MvtWatcher
   const resolver = createResolver(root, resolvers)
 
   ;[...plugins, ...internalPlugins].forEach((m) =>

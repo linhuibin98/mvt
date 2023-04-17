@@ -7,7 +7,7 @@ import MagicString from 'magic-string'
 import { init as initLexer, parse as parseImports } from 'es-module-lexer'
 import { cachedRead } from './utils'
 import { promises as fs } from 'fs'
-import { hmrClientPublicPath } from './serverPluginHmr'
+import { hmrClientPublicPath, debugHmr } from './serverPluginHmr'
 import { parse } from '@babel/parser'
 import { StringLiteral } from '@babel/types'
 import LRUCache from 'lru-cache'
@@ -283,7 +283,7 @@ function rewriteImports(
             // force re-fetch all imports by appending timestamp
             // if this is a hmr refresh request
             if (timestamp) {
-              query += `${query ? `&` : `?`}=${timestamp}`
+              query += `${query ? `&` : `?`}t=${timestamp}`
             }
             const resolved = pathname + query
             if (resolved !== id) {
@@ -292,8 +292,9 @@ function rewriteImports(
               hasReplaced = true
             }
             // save the import chain for hmr analysis
-            const importee = path.join(path.dirname(importer), id)
+            const importee = path.join(path.dirname(importer), resolved)
             currentImportees.add(importee)
+            debugHmr(`importer: ${importer}, importee: ${importee}`)
             ensureMapEntry(importerMap, importee).add(importer)
           }
         } else if (dynamicIndex >= 0) {
@@ -301,7 +302,7 @@ function rewriteImports(
           debugImportRewrite(` dynamic import "${id}" (ignored)`)
         }
       })
-
+      
       // since the importees may have changed due to edits,
       // check if we need to remove this importer from certain importees
       if (prevImportees) {

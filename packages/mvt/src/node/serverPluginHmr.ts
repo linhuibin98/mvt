@@ -35,7 +35,7 @@ import { parseSFC, vueCache } from './serverPluginVue'
 import { importerMap, hmrBoundariesMap } from './serverPluginModules'
 import { cachedRead } from './utils'
 import chalk from 'chalk'
-import {normalizePath} from '@rollup/pluginutils';
+import { normalizePath } from '@rollup/pluginutils'
 
 import type { SFCBlock } from '@vue/compiler-sfc'
 import type { Plugin } from './server'
@@ -48,7 +48,7 @@ export interface HMRPayload {
   id?: string
 }
 
-const debug = require('debug')('mvt:hmr')
+export const debugHmr = require('debug')('mvt:hmr')
 
 // client and node files are placed flat in the dist folder
 export const hmrClientFilePath = path.resolve(__dirname, './client.js')
@@ -59,7 +59,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     if (ctx.path !== hmrClientPublicPath) {
       return next()
     }
-    debug('serving hmr client')
+    debugHmr('serving hmr client')
     ctx.type = 'js'
     await cachedRead(ctx, hmrClientFilePath)
   })
@@ -69,7 +69,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
   const sockets = new Set<WebSocket>()
 
   wss.on('connection', (socket) => {
-    debug('ws client connected')
+    debugHmr('ws client connected')
     sockets.add(socket)
     socket.send(JSON.stringify({ type: 'connected' }))
     socket.on('close', () => {
@@ -86,12 +86,12 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
 
   const notify = (payload: HMRPayload) => {
     const stringified = JSON.stringify(payload, null, 2)
-    debug(`update: ${stringified}`)
+    debugHmr(`update: ${stringified}`)
     sockets.forEach((s) => s.send(stringified))
   }
 
   watcher.on('change', async (file) => {
-    file = normalizePath(file);
+    file = normalizePath(file)
     const timestamp = Date.now()
     if (file.endsWith('.vue')) {
       handleVueReload(file, timestamp)
@@ -111,7 +111,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     const publicPath = resolver.fileToRequest(file)
     const cacheEntry = vueCache.get(file)
 
-    debug(`busting Vue cache for ${file}`)
+    debugHmr(`busting Vue cache for ${file}`)
     vueCache.delete(file)
 
     const descriptor = await parseSFC(root, file, content)
@@ -193,8 +193,9 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     }
   }
 
-  function handleJSReload(publicPath: string, timestamp: number) {
+  function handleJSReload(filePath: string, timestamp: number) {
     // normal js file
+    const publicPath = resolver.fileToRequest(filePath)
     const importers = importerMap.get(publicPath)
     if (importers) {
       const vueImporters = new Set<string>()
@@ -228,6 +229,8 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
           })
         })
       }
+    } else {
+      debugHmr(`no importers for ${publicPath}.`)
     }
   }
 
@@ -264,8 +267,6 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     const deps = hmrBoundariesMap.get(importer)
     return deps ? deps.has(dep) : false
   }
-
-  
 }
 
 function isEqual(a: SFCBlock | null, b: SFCBlock | null) {
