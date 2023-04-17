@@ -13,8 +13,8 @@ import type { Resolver, InternalResolver } from './resolver'
 export { Resolver }
 
 export type MvtWatcher = FSWatcher & {
-  handleVueReload: (file: string, timestamp: number, content?: string) => void
-  handleJSReload: (file: string, timestamp: number) => void
+  handleVueReload: (file: string, timestamp?: number, content?: string) => void
+  handleJSReload: (file: string, timestamp?: number) => void
 }
 
 export interface PluginContext {
