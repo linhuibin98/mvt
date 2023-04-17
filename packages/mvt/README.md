@@ -1,8 +1,6 @@
 # mvt
 
-> No-bundle Dev Server for Vue Single-File Components
-
-**⚠️ Warning: Experimental ⚠️**
+> No-bundle Dev Server for Vue 3 Single-File Components.
 
 Create the following files:
 
@@ -52,3 +50,12 @@ Starting with version `^0.5.0`, you can run `mvt build` to bundle the app and de
 - `mvt build --cdn`: import `vue` from a CDN link in the built js. This will make the build faster, but overall the page payload will be larger because therer will be no tree-shaking for Vue APIs.
 
 Internally, we use a highly opinionated Rollup config to generate the build. There is currently intentionally no exposed way to configure the build -- we will likely tackle that at a later stage.
+
+## TODOs
+
+- Source Map support
+- Auto loading postcss config
+
+## License
+
+MIT
