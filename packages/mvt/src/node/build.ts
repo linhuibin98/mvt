@@ -215,6 +215,7 @@ export async function build({
       // write chunk
       const filepath = path.join(outDir, chunk.fileName)
       console.log(`write ${chalk.cyan(path.relative(process.cwd(), filepath))}`)
+      await fs.mkdir(path.dirname(filepath), { recursive: true })
       await fs.writeFile(filepath, chunk.code)
     }
   }
