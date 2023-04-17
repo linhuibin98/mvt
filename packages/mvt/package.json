@@ -16,6 +16,9 @@
     "bin",
     "dist"
   ],
+  "engines": {
+    "node": ">=10.0.0"
+  },
   "scripts": {
     "dev": "run-p dev-client dev-server",
     "dev-client": "tsc -w --p src/client",
