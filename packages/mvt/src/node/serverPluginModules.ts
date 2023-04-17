@@ -21,7 +21,7 @@ const debugModuleResolution = require('debug')('mvt:resolve')
 const idToEntryMap = new Map()
 const idToFileMap = new Map()
 const webModulesMap = new Map()
-const rewriteCache = new LRUCache({ max: 65535 })
+const rewriteCache = new LRUCache({ max: 1024 })
 
 export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
   // bust module rewrite cache on file change
