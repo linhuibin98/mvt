@@ -224,6 +224,7 @@ function compileSFCTemplate(
     id: `data-v-${hash(filePath)}`,
     source: template.content,
     filename: filePath,
+    transformAssetUrls: false,
     compilerOptions: {
       runtimeModuleName: '/@modules/vue',
       scopeId: scoped ? `data-v-${hash(publicPath)}` : null
