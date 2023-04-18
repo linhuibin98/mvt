@@ -29,6 +29,15 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
     debug(`${publicPath}: cache busted`)
     rewriteCache.delete(publicPath)
   })
+
+  // inject __DEV__ and process.env.NODE_ENV flags
+  // since some ESM builds expect these to be replaced by the bundler
+  const devInjectionCode =
+    `\n<script>` +
+    `window.__DEV__ = true\n` +
+    `window.process = { env: { NODE_ENV: 'development' }}\n` +
+    `</script>\n`
+
   app.use(async (ctx, next) => {
     await next()
     if (ctx.path === '/index.html') {
@@ -43,9 +52,7 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
           /(<script\b[^>]*>)([\s\S]*?)<\/script>/gm,
           (_, openTag, script) => {
             // also inject __DEV__ flag
-            const devFlag = hasInjectedDevFlag
-              ? ''
-              : `\n<script>window.__DEV__ = true</script>\n`
+            const devFlag = hasInjectedDevFlag ? '' : devInjectionCode
             hasInjectedDevFlag = true
             return `${devFlag}${openTag}${rewriteImports(
               script,
