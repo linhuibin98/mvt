@@ -3,14 +3,15 @@ import { Readable } from 'stream'
 import MagicString from 'magic-string'
 // @ts-ignore
 import { init as initLexer, parse as parseImports } from 'es-module-lexer'
-import { hmrClientPublicPath, debugHmr } from './serverPluginHmr'
 import LRUCache from 'lru-cache'
 import slash from 'slash'
 import {
+  debugHmr,
   importerMap,
   importeeMap,
   ensureMapEntry,
-  rewriteFileWithHMR
+  rewriteFileWithHMR,
+  hmrClientPublicPath
 } from './serverPluginHmr'
 
 import type { InternalResolver } from './resolver'
