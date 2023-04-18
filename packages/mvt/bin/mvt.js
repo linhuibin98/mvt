@@ -5,6 +5,12 @@ const getIPv4AddressList = require('../dist/utils').getIPv4AddressList
 
 console.log(chalk.cyan(`mvt v${require('../package.json').version}`))
 
+Object.keys(argv).forEach((key) => {
+    if (argv[key] === 'false') {
+        argv[key] = false
+    }
+})
+
 if (argv._[0] === 'build') {
     console.log(chalk.yellow('Building for production...'))
     require('../dist')
