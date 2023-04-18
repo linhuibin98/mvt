@@ -56,7 +56,7 @@ export type HMRWatcher = FSWatcher & {
 // so that we can determine what files to hot reload
 type HMRStateMap = Map<string, Set<string>>
 
-export const hmrBoundariesMap: HMRStateMap = new Map()
+export const hmrAcceptanceMap: HMRStateMap = new Map()
 export const importerMap: HMRStateMap = new Map()
 export const importeeMap: HMRStateMap = new Map()
 
@@ -261,11 +261,17 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     vueImporters: Set<string>,
     jsHotImporters: Set<string>
   ): boolean {
+    if (isHmrAccepted(importee, importee)) {
+      // self-accepting module.
+      jsHotImporters.add(importee)
+      return false
+    }
+
     let hasDeadEnd = false
     for (const importer of currentImporters) {
       if (importer.endsWith('.vue')) {
         vueImporters.add(importer)
-      } else if (isHMRBoundary(importer, importee)) {
+      } else if (isHmrAccepted(importer, importee)) {
         jsHotImporters.add(importer)
       } else {
         const parentImpoters = importerMap.get(importer)
@@ -285,8 +291,8 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
   }
 }
 
-function isHMRBoundary(importer: string, dep: string): boolean {
-  const deps = hmrBoundariesMap.get(importer)
+function isHmrAccepted(importer: string, dep: string): boolean {
+  const deps = hmrAcceptanceMap.get(importer)
   return deps ? deps.has(dep) : false
 }
 
@@ -329,7 +335,7 @@ export function rewriteFileWithHMR(
   }).program.body
 
   const registerDep = (e: StringLiteral) => {
-    const deps = ensureMapEntry(hmrBoundariesMap, importer)
+    const deps = ensureMapEntry(hmrAcceptanceMap, importer)
     const depPublicPath = slash(path.resolve(path.dirname(importer), e.value))
     deps.add(depPublicPath)
     debugHmr(`        ${importer} accepts ${depPublicPath}`)
@@ -362,9 +368,15 @@ export function rewriteFileWithHMR(
         })
       } else if (args[0].type === 'StringLiteral') {
         registerDep(args[0])
+      } else if (args[0].type.endsWith('FunctionExpression')) {
+        // self accepting, rewrite to inject itself
+        // hot.accept(() => {})  -->  hot.accept('/foo.js', '/foo.js', () => {})
+        s.appendLeft(args[0].start!, JSON.stringify(importer) + ', ')
+        ensureMapEntry(hmrAcceptanceMap, importer).add(importer)
       } else {
         console.error(
-          `[mvt] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
+          `[mvt] HMR syntax error in ${importer}: ` +
+            `hot.accept() expects a dep string, an array of deps, or a callback.`
         )
       }
     }
