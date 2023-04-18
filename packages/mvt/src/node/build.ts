@@ -26,7 +26,7 @@ interface BuildOptionsBase {
   rollupInputOptions?: InputOptions
   rollupOutputOptions?: OutputOptions | OutputOptions[]
   write?: boolean // if false, does not write to disk.
-  debug?: boolean // if true, generates non-minified code for inspection.
+  minify?: boolean // if true, generates non-minified code for inspection.
   silent?: boolean
   rollupPluginVueOptions?: Partial<Options>
 }
@@ -61,7 +61,7 @@ export async function build({
   rollupInputOptions = {},
   rollupOutputOptions = {},
   write = true,
-  debug = false,
+  minify = true,
   silent = false,
   rollupPluginVueOptions = {}
 }: BuildOptions = {}): Promise<BuildResult | BuildResult[]> {
@@ -153,7 +153,7 @@ export async function build({
         css += s
       })
       // minify with cssnano
-      if (!debug) {
+      if (minify) {
         css = (
           await require('postcss')([require('cssnano')]).process(css, {
             from: undefined
@@ -204,7 +204,7 @@ export async function build({
         }
       }),
       cssExtractPlugin,
-      ...(debug ? [] : [require('rollup-plugin-terser').terser()])
+      ...(minify ? [require('rollup-plugin-terser').terser()] : [])
     ],
     onwarn(warning, warn) {
       if (warning.code !== 'CIRCULAR_DEPENDENCY') {
