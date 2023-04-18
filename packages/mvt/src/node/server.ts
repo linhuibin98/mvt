@@ -4,9 +4,10 @@ import chokidar from 'chokidar'
 import { createResolver } from './resolver'
 
 import { hmrPlugin, HMRWatcher } from './serverPluginHmr'
-import { modulesPlugin } from './serverPluginModules'
+import { moduleRewritePlugin } from './serverPluginModuleRewrite'
+import { moduleResolvePlugin } from './serverPluginModuleResolve'
 import { vuePlugin } from './serverPluginVue'
-import { servePlugin } from './serverPluginServe'
+import { serveStaticPlugin } from './serverPluginServeStatic'
 
 import type { Resolver, InternalResolver } from './resolver'
 
@@ -29,10 +30,11 @@ export interface ServerConfig {
 }
 
 const internalPlugins: Plugin[] = [
-  hmrPlugin,
-  modulesPlugin,
+  moduleRewritePlugin,
+  moduleResolvePlugin,
   vuePlugin,
-  servePlugin
+  hmrPlugin,
+  serveStaticPlugin
 ]
 
 export function createServer(config: ServerConfig = {}): Server {

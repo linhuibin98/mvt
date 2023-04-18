@@ -1,50 +1,40 @@
-import { resolveVue } from './resolveVue'
 import path from 'pathe'
 import { Readable } from 'stream'
-import resolve from 'resolve-from'
 import MagicString from 'magic-string'
 // @ts-ignore
 import { init as initLexer, parse as parseImports } from 'es-module-lexer'
-import { cachedRead } from './utils'
-import { promises as fs } from 'fs'
 import { hmrClientPublicPath, debugHmr } from './serverPluginHmr'
 import { parse } from '@babel/parser'
 import { StringLiteral, Statement, Expression } from '@babel/types'
 import LRUCache from 'lru-cache'
-import chalk from 'chalk'
 import slash from 'slash'
 
 import type { InternalResolver } from './resolver'
 import type { Plugin } from './server'
 
-const debugImportRewrite = require('debug')('mvt:rewrite')
-const debugModuleResolution = require('debug')('mvt:resolve')
-
-const idToEntryMap = new Map()
-const idToFileMap = new Map()
-const webModulesMap = new Map()
+const debug = require('debug')('mvt:rewrite')
 const rewriteCache = new LRUCache({ max: 1024 })
 
-export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
+// Plugin for rewriting served js.
+// - Rewrites named module imports to `/@modules/:id` requests, e.g.
+//   "vue" => "/@modules/vue"
+// - Rewrites HMR `hot.accept` calls to inject the file's own path. e.g.
+//   `hot.accept('./dep.js', cb)` -> `hot.accept('/importer.js', './dep.js', cb)`
+// - Also tracks importer/importee relationship graph during the rewrite.
+//   The graph is used by the HMR plugin to perform analysis on file change.
+export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
   // bust module rewrite cache on file change
   watcher.on('change', (file) => {
     const publicPath = resolver.fileToRequest(file)
-    debugImportRewrite(`${publicPath}: cache busted`)
+    debug(`${publicPath}: cache busted`)
     rewriteCache.delete(publicPath)
   })
-
-  // rewrite named module imports to `/@modules/:id` requests
   app.use(async (ctx, next) => {
     await next()
-
-    if (ctx.status === 304) {
-      return
-    }
-
     if (ctx.path === '/index.html') {
       const html = await readBody(ctx.body)
       if (rewriteCache.has(html)) {
-        debugImportRewrite('/index.html: serving from cache')
+        debug('/index.html: serving from cache')
         ctx.body = rewriteCache.get(html)
       } else if (ctx.body) {
         await initLexer
@@ -54,7 +44,7 @@ export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
           (_, openTag, script) => {
             // also inject __DEV__ flag
             const devFlag = hasInjectedDevFlag
-              ? ``
+              ? ''
               : `\n<script>window.__DEV__ = true</script>\n`
             hasInjectedDevFlag = true
             return `${devFlag}${openTag}${rewriteImports(
@@ -81,7 +71,7 @@ export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
     ) {
       const content = await readBody(ctx.body)
       if (rewriteCache.has(content)) {
-        debugImportRewrite(`${ctx.url}: serving from cache`)
+        debug(`${ctx.url}: serving from cache`)
         ctx.body = rewriteCache.get(content)
       } else {
         await initLexer
@@ -94,93 +84,7 @@ export const modulesPlugin: Plugin = ({ root, app, watcher, resolver }) => {
         rewriteCache.set(content, ctx.body)
       }
     } else {
-      debugImportRewrite(`not rewriting: ${ctx.url}`)
-    }
-  })
-
-  // handle /@modules/:id requests
-  const moduleRE = /^\/@modules\//
-  const getDebugPath = (p: string) => {
-    const relative = path.relative(root, p)
-    return relative.startsWith('..') ? p : relative
-  }
-
-  app.use(async (ctx, next) => {
-    if (!moduleRE.test(ctx.path)) {
-      return next()
-    }
-
-    const id = ctx.path.replace(moduleRE, '')
-    ctx.type = 'js'
-
-    // special handling for vue's runtime.
-    if (id === 'vue') {
-      const vuePath = resolveVue(root).vue
-      await cachedRead(ctx, vuePath)
-      debugModuleResolution(`vue -> ${getDebugPath(vuePath)}`)
-      return
-    }
-
-    // already resolved and cached
-    const cachedPath = idToFileMap.get(id)
-    if (cachedPath) {
-      await cachedRead(ctx, cachedPath)
-      debugModuleResolution(`(cached) ${id} -> ${getDebugPath(cachedPath)}`)
-      return
-    }
-
-    // package entries need redirect to ensure correct relative import paths
-    // check if the entry was already resolved
-    const cachedEntry = idToEntryMap.get(id)
-    if (cachedEntry) {
-      return ctx.redirect(path.join(ctx.path, cachedEntry))
-    }
-
-    // resolve from web_modules
-    try {
-      const webModulePath = await resolveWebModule(root, id)
-      if (webModulePath) {
-        idToFileMap.set(id, webModulePath)
-        await cachedRead(ctx, webModulePath)
-        debugModuleResolution(
-          `web_modules: ${id} -> ${getDebugPath(webModulePath)}`
-        )
-        return
-      }
-    } catch (e) {
-      console.error(
-        chalk.red(`[mvt] Error while resolving web_modules with id "${id}":`)
-      )
-      console.error(e)
-      ctx.status = 404
-    }
-
-    // resolve from node_modules
-    try {
-      let pkgPath
-      try {
-        pkgPath = resolve(root, `${id}/package.json`)
-      } catch (e) {}
-      if (pkgPath) {
-        const pkg = require(pkgPath)
-        const entryPoint = pkg.module || pkg.main || 'index.js'
-        debugModuleResolution(`node_modules entry: ${id} -> ${entryPoint}`)
-        idToEntryMap.set(id, entryPoint)
-        return ctx.redirect(path.join(ctx.path, entryPoint))
-      }
-      // in case of deep imports like 'foo/dist/bar.js'
-      const modulePath = resolve(root, id)
-      idToFileMap.set(id, modulePath)
-      debugModuleResolution(
-        `node_modules import: ${id} -> ${getDebugPath(modulePath)}`
-      )
-      await cachedRead(ctx, modulePath)
-    } catch (e) {
-      console.error(
-        chalk.red(`[mvt] Error while resolving node_modules with id "${id}":`)
-      )
-      console.error(e)
-      ctx.status = 404
+      debug(`not rewriting: ${ctx.url}`)
     }
   })
 }
@@ -201,34 +105,12 @@ async function readBody(stream: Readable | string): Promise<string> {
   }
 }
 
-async function resolveWebModule(
-  root: string,
-  id: string
-): Promise<string | undefined> {
-  const webModulePath = webModulesMap.get(id)
-  if (webModulePath) {
-    return webModulePath
-  }
-  const importMapPath = path.join(root, 'web_modules', 'import-map.json')
-  if (await fs.stat(importMapPath).catch((e) => false)) {
-    const importMap = require(importMapPath)
-    if (importMap.imports) {
-      const webModulesDir = path.dirname(importMapPath)
-      Object.entries(importMap.imports).forEach(
-        ([key, val]: [string, string]) =>
-          webModulesMap.set(key, path.join(webModulesDir, val))
-      )
-      return webModulesMap.get(id)
-    }
-  }
-}
-
 // while we lex the files for imports we also build a import graph
 // so that we can determine what files to hot reload
 type HMRStateMap = Map<string, Set<string>>
 
-export const importerMap: HMRStateMap = new Map() // 模块被什么模块依赖
-export const importeeMap: HMRStateMap = new Map() // 模块依赖的模块
+export const importerMap: HMRStateMap = new Map()
+export const importeeMap: HMRStateMap = new Map()
 export const hmrBoundariesMap: HMRStateMap = new Map()
 
 const ensureMapEntry = (map: HMRStateMap, key: string): Set<string> => {
@@ -249,11 +131,11 @@ function rewriteImports(
   if (typeof source !== 'string') {
     source = String(source)
   }
-
   try {
     const [imports] = parseImports(source)
+
     if (imports.length) {
-      debugImportRewrite(`${importer}: rewriting`)
+      debug(`${importer}: rewriting`)
       const s = new MagicString(source)
       let hasReplaced = false
 
@@ -296,10 +178,11 @@ function rewriteImports(
           }
 
           if (resolved !== id) {
-            debugImportRewrite(`    "${id}" --> "${resolved}"`)
+            debug(`    "${id}" --> "${resolved}"`)
             s.overwrite(start, end, resolved)
             hasReplaced = true
           }
+
           // save the import chain for hmr analysis
           const importee = slash(path.resolve(path.dirname(importer), resolved))
           currentImportees.add(importee)
@@ -307,7 +190,7 @@ function rewriteImports(
           ensureMapEntry(importerMap, importee).add(importer)
         } else if (dynamicIndex >= 0) {
           // TODO dynamic import
-          debugImportRewrite(` dynamic import "${id}" (ignored)`)
+          debug(`    dynamic import "${id}" (ignored)`)
         }
       })
 
@@ -325,21 +208,21 @@ function rewriteImports(
       }
 
       if (!hasReplaced) {
-        debugImportRewrite(`    no imports rewritten.`)
+        debug(`    no imports rewritten.`)
       }
 
       return hasReplaced ? s.toString() : source
     } else {
-      debugImportRewrite(`${importer}: no imports found.`)
+      debug(`${importer}: no imports found.`)
     }
 
     return source
   } catch (e) {
     console.error(
-      `[mvt] Error: module imports rewrite failed for ${importer}.\n`,
+      `[vite] Error: module imports rewrite failed for ${importer}.\n`,
       e
     )
-    debugImportRewrite(source)
+    debug(source)
     return source
   }
 }
@@ -361,7 +244,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
     const deps = ensureMapEntry(hmrBoundariesMap, importer)
     const depPublicPath = slash(path.resolve(path.dirname(importer), e.value))
     deps.add(depPublicPath)
-    debugHmr(` ${importer} accepts ${depPublicPath}`)
+    debugHmr(`        ${importer} accepts ${depPublicPath}`)
     s.overwrite(e.start!, e.end!, JSON.stringify(depPublicPath))
   }
 
@@ -383,7 +266,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
         args[0].elements.forEach((e) => {
           if (e && e.type !== 'StringLiteral') {
             console.error(
-              `[mvt] HMR syntax error in ${importer}: hot.accept() deps list can only contain string literals.`
+              `[vite] HMR syntax error in ${importer}: hot.accept() deps list can only contain string literals.`
             )
           } else if (e) {
             registerDep(e)
@@ -393,7 +276,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
         registerDep(args[0])
       } else {
         console.error(
-          `[mvt] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
+          `[vite] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
         )
       }
     }
@@ -403,7 +286,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
     if (node.type === 'ExpressionStatement') {
       // top level hot.accept() call
       checkAcceptCall(node.expression)
-      // __DEV && hot.accept
+      // __DEV__ && hot.accept()
       if (
         node.expression.type === 'LogicalExpression' &&
         node.expression.operator === '&&' &&
