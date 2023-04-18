@@ -226,7 +226,7 @@ function rewriteImports(
     return source
   } catch (e) {
     console.error(
-      `[vite] Error: module imports rewrite failed for ${importer}.\n`,
+      `[mvt] Error: module imports rewrite failed for ${importer}.\n`,
       e
     )
     debug(source)
@@ -273,7 +273,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
         args[0].elements.forEach((e) => {
           if (e && e.type !== 'StringLiteral') {
             console.error(
-              `[vite] HMR syntax error in ${importer}: hot.accept() deps list can only contain string literals.`
+              `[mvt] HMR syntax error in ${importer}: hot.accept() deps list can only contain string literals.`
             )
           } else if (e) {
             registerDep(e)
@@ -283,7 +283,7 @@ function parseAcceptedDeps(source: string, importer: string, s: MagicString) {
         registerDep(args[0])
       } else {
         console.error(
-          `[vite] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
+          `[mvt] HMR syntax error in ${importer}: hot.accept() expects a dep string or an array of deps.`
         )
       }
     }
