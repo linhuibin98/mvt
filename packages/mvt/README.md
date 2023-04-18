@@ -123,8 +123,11 @@ const { build } = require('@unbundle/mvt')
 
 ## TODOs
 
-- Source Map support
+- Support importing `.css` and `.json`
+- Public path handling
+- Config file support
 - Auto loading postcss config
+- Vue file source maps
 
 ## License
 
