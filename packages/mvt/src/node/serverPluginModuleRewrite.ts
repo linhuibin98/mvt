@@ -52,13 +52,13 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
 
     if (ctx.path === '/index.html') {
       const html = await readBody(ctx.body)
-      if (rewriteCache.has(html)) {
+      if (html && rewriteCache.has(html)) {
         debug('/index.html: serving from cache')
         ctx.body = rewriteCache.get(html)
       } else if (ctx.body) {
         await initLexer
         let hasInjectedDevFlag = false
-        ctx.body = html.replace(
+        ctx.body = html!.replace(
           /(<script\b[^>]*>)([\s\S]*?)<\/script>/gm,
           (_, openTag, script) => {
             // also inject __DEV__ flag
@@ -71,7 +71,7 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
             )}</script>`
           }
         )
-        rewriteCache.set(html, ctx.body)
+        rewriteCache.set(html!, ctx.body)
       }
     }
 
@@ -79,6 +79,7 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
     // this allows us to post-process javascript produced by user middlewares
     // regardless of the extension of the original files.
     if (
+      ctx.body &&
       ctx.response.is('js') &&
       !ctx.url.endsWith('.map') &&
       // skip internal client
@@ -87,18 +88,18 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
       !((ctx.path.endsWith('.vue') || ctx.vue) && ctx.query.type != null)
     ) {
       const content = await readBody(ctx.body)
-      if (rewriteCache.has(content)) {
+      if (rewriteCache.has(content!)) {
         debug(`${ctx.url}: serving from cache`)
-        ctx.body = rewriteCache.get(content)
+        ctx.body = rewriteCache.get(content!)
       } else {
         await initLexer
         ctx.body = rewriteImports(
-          content,
+          content!,
           ctx.url.replace(/(&|\?)t=\d+/, ''),
           resolver,
           ctx.query.t as string
         )
-        rewriteCache.set(content, ctx.body)
+        rewriteCache.set(content!, ctx.body)
       }
     } else {
       debug(`not rewriting: ${ctx.url}`)
