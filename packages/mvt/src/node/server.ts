@@ -9,6 +9,7 @@ import { moduleResolvePlugin } from './serverPluginModuleResolve'
 import { vuePlugin } from './serverPluginVue'
 import { serveStaticPlugin } from './serverPluginServeStatic'
 import { jsonPlugin } from './serverPluginJson'
+import { cssPlugin } from './serverPluginCss'
 
 import type { Resolver, InternalResolver } from './resolver'
 import slash from 'slash'
@@ -36,6 +37,7 @@ const internalPlugins: Plugin[] = [
   moduleResolvePlugin,
   vuePlugin,
   jsonPlugin,
+  cssPlugin,
   hmrPlugin,
   serveStaticPlugin
 ]

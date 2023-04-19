@@ -45,6 +45,11 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
 
   app.use(async (ctx, next) => {
     await next()
+    
+    if (ctx.status === 304) {
+      return
+    }
+
     if (ctx.path === '/index.html') {
       const html = await readBody(ctx.body)
       if (rewriteCache.has(html)) {
