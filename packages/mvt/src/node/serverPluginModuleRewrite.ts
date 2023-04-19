@@ -1,5 +1,4 @@
 import path from 'pathe'
-import { Readable } from 'stream'
 import MagicString from 'magic-string'
 // @ts-ignore
 import { init as initLexer, parse as parseImports } from 'es-module-lexer'
@@ -13,6 +12,7 @@ import {
   rewriteFileWithHMR,
   hmrClientPublicPath
 } from './serverPluginHmr'
+import { readBody } from './utils'
 
 import type { InternalResolver } from './resolver'
 import type { Plugin } from './server'
@@ -99,22 +99,6 @@ export const moduleRewritePlugin: Plugin = ({ app, watcher, resolver }) => {
       debug(`not rewriting: ${ctx.url}`)
     }
   })
-}
-
-async function readBody(stream: Readable | string): Promise<string> {
-  if (stream instanceof Readable) {
-    return new Promise((resolve, reject) => {
-      let res = ''
-      stream
-        .on('data', (chunk) => (res += chunk))
-        .on('error', reject)
-        .on('end', () => {
-          resolve(res)
-        })
-    })
-  } else {
-    return stream
-  }
 }
 
 function rewriteImports(

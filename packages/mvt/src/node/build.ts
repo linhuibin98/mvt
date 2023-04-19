@@ -107,6 +107,7 @@ export async function build(
         // TODO proxy cssModules config
         ...rollupPluginVueOptions
       }),
+      require('@rollup/plugin-json')(),
       require('@rollup/plugin-node-resolve')({
         rootDir: root
       }),

@@ -2,6 +2,7 @@ import { promises as fs } from 'fs'
 import os from 'os'
 import LRUCache from 'lru-cache'
 import path from 'pathe'
+import { Readable } from 'stream'
 
 import type { Context } from 'koa'
 
@@ -63,6 +64,24 @@ export async function cachedRead(ctx: Context | null, file: string) {
     ctx.status = 200
   }
   return content
+}
+
+export async function readBody(
+  stream: Readable | Buffer | string
+): Promise<string> {
+  if (stream instanceof Readable) {
+    return new Promise((resolve, reject) => {
+      let res = ''
+      stream
+        .on('data', (chunk) => (res += chunk))
+        .on('error', reject)
+        .on('end', () => {
+          resolve(res)
+        })
+    })
+  } else {
+    return typeof stream === 'string' ? stream : stream.toString()
+  }
 }
 
 export function getIPv4AddressList(): string[] {

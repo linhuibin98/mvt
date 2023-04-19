@@ -13,6 +13,7 @@ importers:
       '@babel/parser': ^7.21.3
       '@babel/types': ^7.21.3
       '@rollup/plugin-alias': ^4.0.3
+      '@rollup/plugin-json': ^6.0.0
       '@rollup/plugin-node-resolve': ^15.0.1
       '@rollup/plugin-replace': ^5.0.2
       '@rollup/pluginutils': ^5.0.2
@@ -63,6 +64,7 @@ importers:
       '@babel/parser': 7.21.3
       '@babel/types': 7.21.3
       '@rollup/plugin-alias': 4.0.3_rollup@3.20.2
+      '@rollup/plugin-json': 6.0.0_rollup@3.20.2
       '@rollup/plugin-node-resolve': 15.0.1_rollup@3.20.2
       '@rollup/plugin-replace': 5.0.2_rollup@3.20.2
       '@rollup/pluginutils': 5.0.2_rollup@3.20.2
@@ -743,6 +745,19 @@ packages:
     dependencies:
       rollup: 3.20.2
       slash: 4.0.0
+    dev: false
+
+  /@rollup/plugin-json/6.0.0_rollup@3.20.2:
+    resolution: {integrity: sha512-i/4C5Jrdr1XUarRhVu27EEwjt4GObltD7c+MkCIpO2QIbojw8MUs+CCTqOphQi3Qtg1FLmYt+l+6YeoIf51J7w==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0||^3.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+    dependencies:
+      '@rollup/pluginutils': 5.0.2_rollup@3.20.2
+      rollup: 3.20.2
     dev: false
 
   /@rollup/plugin-node-resolve/15.0.1_rollup@3.20.2:

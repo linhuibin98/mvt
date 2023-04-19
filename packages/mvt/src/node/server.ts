@@ -8,8 +8,10 @@ import { moduleRewritePlugin } from './serverPluginModuleRewrite'
 import { moduleResolvePlugin } from './serverPluginModuleResolve'
 import { vuePlugin } from './serverPluginVue'
 import { serveStaticPlugin } from './serverPluginServeStatic'
+import { jsonPlugin } from './serverPluginJson'
 
 import type { Resolver, InternalResolver } from './resolver'
+import slash from 'slash'
 
 export { Resolver }
 
@@ -33,12 +35,15 @@ const internalPlugins: Plugin[] = [
   moduleRewritePlugin,
   moduleResolvePlugin,
   vuePlugin,
+  jsonPlugin,
   hmrPlugin,
   serveStaticPlugin
 ]
 
 export function createServer(config: ServerConfig = {}): Server {
-  const { root = process.cwd(), plugins = [], resolvers = [] } = config
+  const { plugins = [], resolvers = [] } = config
+  let { root = process.cwd() } = config
+  root = slash(root)
   const app = new Koa()
   const server = http.createServer(app.callback())
   const watcher = chokidar.watch(root, {
