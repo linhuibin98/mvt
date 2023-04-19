@@ -119,7 +119,7 @@ export async function build(
         }
       }),
       // mvt:css
-      createBuildCssPlugin(cssFileName, minify),
+      createBuildCssPlugin(assetsDir, cssFileName, minify),
       // mvt:asset
       createBuildAssetPlugin(assetsDir),
       // minify with terser
