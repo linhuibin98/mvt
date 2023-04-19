@@ -66,7 +66,15 @@ export const hmrClientId = '@hmr'
 export const hmrClientPublicPath = `/${hmrClientId}`
 
 interface HMRPayload {
-  type: string
+  type:
+    | 'vue-rerender'
+    | 'vue-reload'
+    | 'vue-style-update'
+    | 'js-update'
+    | 'style-update'
+    | 'style-remove'
+    | 'full-reload'
+    | 'custom'
   timestamp: number
   path?: string
   index?: number
@@ -192,7 +200,7 @@ export const hmrPlugin: Plugin = ({ root, app, server, watcher, resolver }) => {
     // stale styles always need to be removed
     prevStyles.slice(nextStyles.length).forEach((_, i) => {
       send({
-        type: 'vue-style-remove',
+        type: 'style-remove',
         path: publicPath,
         id: `${styleId}-${i + nextStyles.length}`,
         timestamp

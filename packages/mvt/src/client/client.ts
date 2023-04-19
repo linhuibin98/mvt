@@ -31,7 +31,11 @@ socket.addEventListener('message', ({ data }) => {
       updateStyle(id, `${path}?type=style&index=${index}&t=${timestamp}`)
       console.log(`[mvt] ${path} style${index > 0 ? `#${index}` : ``} updated.`)
       break
-    case 'vue-style-remove':
+    case 'style-update':
+      updateStyle(id, `${path}?raw&t=${timestamp}`)
+      console.log(`[mvt] ${path} updated.`)
+      break
+    case 'style-remove':
       const link = document.getElementById(`vue-css-${id}`)
       if (link) {
         document.head.removeChild(link)
@@ -64,9 +68,12 @@ socket.addEventListener('message', ({ data }) => {
 socket.addEventListener('close', () => {
   console.log(`[mvt] server connection lost. polling for restart...`)
   setInterval(() => {
-    new WebSocket(`${socketProtocol}://${location.host}`).addEventListener('open', () => {
-      location.reload()
-    })
+    new WebSocket(`${socketProtocol}://${location.host}`).addEventListener(
+      'open',
+      () => {
+        location.reload()
+      }
+    )
   }, 1000)
 })
 
