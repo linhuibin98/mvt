@@ -1,3 +1,4 @@
+import path from 'pathe'
 import {
   SFCDescriptor,
   SFCTemplateBlock,
@@ -224,7 +225,9 @@ function compileSFCTemplate(
     id: `data-v-${hash(filePath)}`,
     source: template.content,
     filename: filePath,
-    transformAssetUrls: false,
+    transformAssetUrls: {
+      base: path.dirname(publicPath)
+    },
     compilerOptions: {
       runtimeModuleName: '/@modules/vue',
       scopeId: scoped ? `data-v-${hash(publicPath)}` : null

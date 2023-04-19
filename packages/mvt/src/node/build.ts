@@ -1,81 +1,74 @@
 import path from 'pathe'
 import { promises as fs, existsSync } from 'fs'
 import { resolveVue } from './resolveVue'
-import { hmrClientId } from './serverPluginHmr'
 import chalk from 'chalk'
-import { normalizePath } from '@rollup/pluginutils'
+import slash from 'slash'
 import resolve from 'resolve-from'
 import { Resolver, createResolver } from './resolver'
+import { scriptRE } from './utils'
+import { createBuildResolvePlugin } from './buildPluginResolve'
+import { createBuildHtmlPlugin } from './buildPluginHtml'
+import { createBuildCssPlugin } from './buildPluginCss'
+import { createBuildAssetPlugin } from './buildPluginAsset'
 
 import type {
   rollup as Rollup,
-  Plugin,
   InputOptions,
   OutputOptions,
   RollupOutput
 } from 'rollup'
-import type {Options} from 'rollup-plugin-vue'
+import type { Options } from 'rollup-plugin-vue'
 
-interface BuildOptionsBase {
+interface BuildOptions {
   root?: string
   cdn?: boolean
-  cssFileName?: string
   resolvers?: Resolver[]
+  outDir?: string
+  assetsDir?: string
   // list files that are included in the build, but not inside project root.
   srcRoots?: string[]
   rollupInputOptions?: InputOptions
-  rollupOutputOptions?: OutputOptions | OutputOptions[]
+  rollupOutputOptions?: OutputOptions
+  rollupPluginVueOptions?: Partial<Options>
+  emitAssets?: boolean
   write?: boolean // if false, does not write to disk.
   minify?: boolean // if true, generates non-minified code for inspection.
   silent?: boolean
-  rollupPluginVueOptions?: Partial<Options>
 }
-
-interface SingleBuildOptions extends BuildOptionsBase {
-  rollupOutputOptions?: OutputOptions
-}
-
-interface MultiBuildOptions extends BuildOptionsBase {
-  rollupOutputOptions?: OutputOptions[]
-}
-
-export type BuildOptions = SingleBuildOptions | MultiBuildOptions
 
 export interface BuildResult {
-  js: RollupOutput['output']
-  css: string
   html: string
+  assets: RollupOutput['output']
 }
 
-const debugBuild = require('debug')('mvt:build')
-const scriptRE = /<script\b[^>]*>([\s\S]*?)<\/script>/gm
-
-export async function build(options: SingleBuildOptions): Promise<BuildResult>
-export async function build(options: MultiBuildOptions): Promise<BuildResult[]>
-export async function build({
-  root = process.cwd(),
-  cdn = resolveVue(root).hasLocalVue,
-  cssFileName = 'style.css',
-  resolvers = [],
-  srcRoots = [],
-  rollupInputOptions = {},
-  rollupOutputOptions = {},
-  write = true,
-  minify = true,
-  silent = false,
-  rollupPluginVueOptions = {}
-}: BuildOptions = {}): Promise<BuildResult | BuildResult[]> {
+export async function build(
+  options: BuildOptions = {}
+): Promise<BuildResult | BuildResult[]> {
   process.env.NODE_ENV = 'production'
   const start = Date.now()
+  const {
+    root = process.cwd(),
+    cdn = !resolveVue(root).hasLocalVue,
+    outDir = path.resolve(root, 'dist'),
+    assetsDir = '',
+    resolvers = [],
+    srcRoots = [],
+    rollupInputOptions = {},
+    rollupOutputOptions = {},
+    rollupPluginVueOptions = {},
+    emitAssets = true,
+    write = true,
+    minify = true,
+    silent = false
+  } = options
 
   // lazy require rollup so that we don't load it when only using the dev server
   // importing it just for the types
   const rollup = require('rollup').rollup as typeof Rollup
 
-  const indexPath = path.resolve(root, 'index.html')
-  // make sure to use the same verison of vue from the CDN.
-  const vueVersion = resolveVue(root).version
-  const cdnLink = `https://unpkg.com/vue@${vueVersion}/dist/vue.esm-browser.prod.js`
+  const indexPath = slash(path.resolve(root, 'index.html'))
+  const cssFileName = 'style.css'
+  const resolvedAssetsPath = path.join(outDir, assetsDir)
 
   let indexContent: string = ''
   try {
@@ -87,103 +80,25 @@ export async function build({
   const resolver = createResolver(root, resolvers)
   srcRoots.push(root)
 
-  const mvtPlugin: Plugin = {
-    name: 'mvt',
-    resolveId(id) {
-      if (id === hmrClientId) {
-        return hmrClientId
-      } else if (id.startsWith('/')) {
-        // if id starts with any of the src root directories, it's a file request
-        if (srcRoots.some((root) => id.startsWith(root))) {
-          return
-        }
-        const resolved = resolver.requestToFile(id)
-        debugBuild(`[resolve]`, id, `-->`, resolved)
-        return resolved
-      } else if (id === 'vue') {
-        if (cdn) {
-          return resolveVue(root, true).vue
-        } else {
-          return {
-            id: cdnLink,
-            external: true
-          }
-        }
-      } else {
-        const request = resolver.idToRequest(id)
-        if (request) {
-          const resolved = resolver.requestToFile(request)
-          debugBuild(`[resolve]`, id, `-->`, request, `--> `, resolved)
-          return resolved
-        }
-      }
-    },
-    load(id) {
-      id = normalizePath(id)
-      if (id === hmrClientId) {
-        return `export const hot = {}`
-      } else if (id === indexPath) {
-        let script = ''
-        let match
-
-        while ((match = scriptRE.exec(indexContent))) {
-          // TODO handle <script type="module" src="..."/>
-          // just add it as an import
-          script += match[1]
-        }
-        return script
-      }
-    }
-  }
-
-  const styles: Map<string, string> = new Map()
-
-  const cssExtractPlugin: Plugin = {
-    name: 'mvt-css',
-    transform(code: string, id: string) {
-      if (id.endsWith('.css')) {
-        styles.set(id, code)
-        return '/* css extracted by mvt */'
-      }
-    },
-    async generateBundle(_options, bundle) {
-      let css = ''
-      // finalize extracted css
-      styles.forEach((s) => {
-        css += s
-      })
-      // minify with cssnano
-      if (minify) {
-        css = (
-          await require('postcss')([require('cssnano')]).process(css, {
-            from: undefined
-          })
-        ).css
-      }
-
-      bundle[cssFileName] = {
-        type: 'asset',
-        fileName: cssFileName,
-        name: cssFileName,
-        source: css,
-        needsCodeReference: true
-      }
-    }
-  }
-
   const userPlugins = await Promise.resolve(rollupInputOptions.plugins)
 
   const bundle = await rollup({
     input: indexPath,
     ...rollupInputOptions,
     plugins: [
+      // user plugins
       ...(Array.isArray(userPlugins)
         ? userPlugins
         : userPlugins
         ? [userPlugins]
         : []),
-      mvtPlugin,
+      // mvt:resolve
+      createBuildResolvePlugin(root, cdn, srcRoots, resolver),
+      // mvt:html
+      ...(indexContent ? [createBuildHtmlPlugin(indexPath, indexContent)] : []),
+      // vue
       require('rollup-plugin-vue')({
+        transformAssetUrls: true,
         // TODO: for now we directly handle pre-processors in rollup-plugin-vue
         // so that we don't need to install dedicated rollup plugins.
         // In the future we probably want to still use rollup plugins so that
@@ -203,7 +118,12 @@ export async function build({
           __DEV__: 'false'
         }
       }),
-      cssExtractPlugin,
+      // mvt:css
+      createBuildCssPlugin(cssFileName, minify),
+      // mvt:asset
+      createBuildAssetPlugin(assetsDir),
+      // minify with terser
+      // modules: true and toplevel: true are implied with format: 'es'
       ...(minify ? [require('rollup-plugin-terser').terser()] : [])
     ],
     onwarn(warning, warn) {
@@ -213,101 +133,80 @@ export async function build({
     }
   })
 
-  async function generate(options: OutputOptions) {
-    const outDir = options.dir || path.resolve(root, 'dist')
-    const { output } = await bundle.generate({
-      dir: outDir,
-      format: 'es',
-      ...options
-    })
+  const { output } = await bundle.generate({
+    format: 'es',
+    ...rollupOutputOptions
+  })
 
-    let generatedIndex =
-      indexContent && indexContent.replace(scriptRE, '').trim()
-    // TODO handle public path for injections?
-    // this would also affect paths in templates and css.
-    if (generatedIndex) {
-      // inject css link
-      generatedIndex = injectCSS(generatedIndex, cssFileName)
-      if (cdn) {
-        // if not inlining vue, inject cdn link so it can start the fetch early
-        generatedIndex = injectScript(generatedIndex, cdnLink)
-      }
+  let generatedIndex = indexContent && indexContent.replace(scriptRE, '').trim()
+  // TODO handle public path for injections?
+  // this would also affect paths in templates and css.
+  if (generatedIndex) {
+    // inject css link
+    generatedIndex = injectCSS(generatedIndex, cssFileName)
+    if (cdn) {
+      // if not inlining vue, inject cdn link so it can start the fetch early
+      generatedIndex = injectScript(generatedIndex, resolveVue(root).cdnLink)
     }
+  }
 
-    if (write) {
-      if (existsSync(outDir)) {
-        await fs.rm(outDir, { recursive: true })
-      }
-      await fs.mkdir(outDir, { recursive: true })
+  if (write) {
+    if (existsSync(outDir)) {
+      await fs.rm(outDir, { recursive: true })
     }
+    await fs.mkdir(outDir, { recursive: true })
+  }
 
-    let css = ''
-    // inject / write bundle
-    for (const chunk of output) {
-      if (chunk.type === 'chunk') {
-        if (chunk.isEntry && generatedIndex) {
-          // inject chunk to html
-          generatedIndex = injectScript(generatedIndex, chunk.fileName)
-        }
-        // write chunk
-        if (write) {
-          const filepath = path.join(outDir, chunk.fileName)
-          !silent &&
-            console.log(
-              `write ${chalk.cyan(path.relative(process.cwd(), filepath))}`
-            )
-          await fs.mkdir(path.dirname(filepath), { recursive: true })
-          await fs.writeFile(filepath, chunk.code)
-        }
-      } else {
-        // write asset
-        if (chunk.fileName === cssFileName) {
-          css = chunk.source.toString()
-        }
-        const filepath = path.join(outDir, chunk.fileName)
+  // inject / write bundle
+  for (const chunk of output) {
+    if (chunk.type === 'chunk') {
+      if (chunk.isEntry && generatedIndex) {
+        // inject chunk to html
+        generatedIndex = injectScript(generatedIndex, chunk.fileName)
+      }
+      // write chunk
+      if (write) {
+        const filepath = path.join(resolvedAssetsPath, chunk.fileName)
         !silent &&
           console.log(
-            `write ${chalk.magenta(path.relative(process.cwd(), filepath))}`
+            `write ${chalk.cyan(path.relative(process.cwd(), filepath))}`
           )
         await fs.mkdir(path.dirname(filepath), { recursive: true })
-        await fs.writeFile(filepath, chunk.source)
+        await fs.writeFile(filepath, chunk.code)
       }
-    }
-
-    if (write) {
-      // write html
-      if (generatedIndex) {
-        const indexOutPath = path.join(outDir, 'index.html')
-        !silent &&
-          console.log(
-            `write ${chalk.green(path.relative(process.cwd(), indexOutPath))}`
-          )
-        await fs.writeFile(indexOutPath, generatedIndex)
-      }
-    }
-
-    return {
-      js: output,
-      html: generatedIndex || '',
-      css
+    } else if (emitAssets) {
+      // write asset
+      const filepath = path.join(resolvedAssetsPath, chunk.fileName)
+      !silent &&
+        console.log(
+          `write ${chalk.magenta(path.relative(process.cwd(), filepath))}`
+        )
+      await fs.mkdir(path.dirname(filepath), { recursive: true })
+      await fs.writeFile(filepath, chunk.source)
     }
   }
 
-  let result: BuildResult | BuildResult[]
-  if (Array.isArray(rollupOutputOptions)) {
-    result = []
-    // make sure to build sequentially for correct css extraction
-    for (const options of rollupOutputOptions) {
-      result.push(await generate(options))
+  if (write) {
+    // write html
+    if (generatedIndex) {
+      const indexOutPath = path.join(outDir, 'index.html')
+      !silent &&
+        console.log(
+          `write ${chalk.green(path.relative(process.cwd(), indexOutPath))}`
+        )
+      await fs.writeFile(indexOutPath, generatedIndex)
     }
-  } else {
-    result = await generate(rollupOutputOptions)
   }
+
   !silent &&
     console.log(
       `Build completed in ${((Date.now() - start) / 1000).toFixed(2)}s.`
     )
-  return result
+
+  return {
+    assets: output,
+    html: generatedIndex || ''
+  }
 }
 
 function injectCSS(html: string, filename: string) {
