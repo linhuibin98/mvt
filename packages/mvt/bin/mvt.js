@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const s = Date.now()
 const chalk = require('chalk')
 const argv = require('minimist')(process.argv.slice(2))
 
@@ -45,7 +46,8 @@ if (argv._[0] === 'build') {
         getIPv4AddressList().forEach((ip) => {
             console.log(`  > http://${ip}:${port}`)
         })
-        console.log(' ')
+        console.log()
+        require('debug')('mvt:server')(`server ready in ${Date.now() - s}ms.`)
     })
 
     server.listen(port)
