@@ -11,6 +11,7 @@ import { cachedRead } from './utils'
 import LRUCache from 'lru-cache'
 import { hmrClientId } from './serverPluginHmr'
 import resolve from 'resolve-from'
+import postcssrc from 'postcss-load-config'
 
 import type { Context } from 'koa'
 import type { Plugin } from './server'
@@ -268,8 +269,8 @@ async function compileSFCStyle(
     scoped: style.scoped != null,
     modules: style.module != null,
     preprocessLang: style.lang as any,
-    preprocessCustomRequire: (id: string) => require(resolve(root, id))
-    // TODO load postcss config if present
+    preprocessCustomRequire: (id: string) => require(resolve(root, id)),
+    ...loadPostCssConfig(root)
   })
 
   if (result.errors.length) {
@@ -283,4 +284,12 @@ async function compileSFCStyle(
   cached.styles[index] = result
   vueCache.set(filePath, cached)
   return result
+}
+
+function loadPostCssConfig(root: string) {
+  const config = postcssrc.sync({}, root)
+  return {
+    postcssOptions: config.options,
+    postcssPlugins: config.plugins
+  }
 }
