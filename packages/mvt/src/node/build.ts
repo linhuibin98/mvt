@@ -1,5 +1,5 @@
 import path from 'pathe'
-import { promises as fs, existsSync } from 'fs'
+import { promises as fs } from 'fs'
 import { resolveVue } from './resolveVue'
 import chalk from 'chalk'
 import slash from 'slash'
@@ -151,9 +151,7 @@ export async function build(
   }
 
   if (write) {
-    if (existsSync(outDir)) {
-      await fs.rm(outDir, { recursive: true })
-    }
+    await fs.rm(outDir, { recursive: true, force: true })
     await fs.mkdir(outDir, { recursive: true })
   }
 

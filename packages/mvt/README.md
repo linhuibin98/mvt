@@ -123,9 +123,7 @@ const { build } = require('@unbundle/mvt')
 
 ## TODOs
 
-- Auto loading postcss config
-- Config file support (custom import maps)
-- Vue file source maps
+- Config file support (custom import maps and plugins)
 
 ## License
 
