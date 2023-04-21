@@ -70,6 +70,11 @@ describe('mvt', () => {
         expect(await child.evaluate((e) => e.textContent)).toBe('This is child')
     })
 
+    test('json data import', async () => {
+        const jsonComp = await page.$('.json')
+        expect(await jsonComp.evaluate((e) => e.textContent)).toBe('hello world')
+    })
+
     test('interaction', async () => {
         const button = await page.$('button')
         await button.click()
@@ -84,7 +89,6 @@ describe('mvt', () => {
             content.replace('{{ count }}', 'count is {{ count }}')
         )
 
-        // poll until it updates
         const button = await page.$('button')
         const maxTries = 10
         for (let tries = 0; tries < maxTries; tries++) {
@@ -97,6 +101,11 @@ describe('mvt', () => {
         }
     })
 
-    // TODO test style HMR
+    test('import plain css', async () => {
+        const child = await page.$('.child')
+        const color = await child.evaluate((e) => window.getComputedStyle(e).color)
+        expect(color).toBe('rgb(79, 192, 141)')
+    })
+
     // TODO test node_modules resolution
 })
