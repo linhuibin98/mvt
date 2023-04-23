@@ -19,6 +19,7 @@ const defaultAssetsOptions: AssetsOptions = {
 
 export const getAssetPublicPath = async (
   id: string,
+  publicBase: string,
   assetsDir: string,
   assetsOptions: AssetsOptions
 ) => {
@@ -26,7 +27,7 @@ export const getAssetPublicPath = async (
   const baseName = path.basename(id, ext)
   const resolvedFileName = `${baseName}.${hash(slash(id))}${ext}`
 
-  let url = slash(path.join('/', assetsDir, resolvedFileName))
+  let url = slash(path.join(publicBase, assetsDir, resolvedFileName))
   const content = await fs.readFile(id)
   if (!id.endsWith(`.svg`)) {
     if (content.length < assetsOptions.inlineThreshold!) {
@@ -57,6 +58,7 @@ export const registerAssets = (
 }
 
 export const createBuildAssetPlugin = (
+  publicBase: string,
   assetsDir: string,
   assetsOptions: AssetsOptions
 ): Plugin => {
@@ -68,6 +70,7 @@ export const createBuildAssetPlugin = (
       if (isStaticAsset(id)) {
         const { fileName, content, url } = await getAssetPublicPath(
           id,
+          publicBase,
           assetsDir,
           assetsOptions
         )

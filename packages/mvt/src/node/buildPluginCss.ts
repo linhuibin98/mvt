@@ -6,12 +6,13 @@ import { isExternalUrl } from './utils'
 import type { AssetsOptions } from './buildPluginAsset'
 import type { Plugin } from 'rollup'
 
-const debug = require('debug')('mvt:css')
+const debug = require('debug')('mvt:build:css')
 
 const urlRE = /(url\(\s*['"]?)([^"')]+)(["']?\s*\))/
 
 export const createBuildCssPlugin = (
   root: string,
+  publicBase: string,
   assetsDir: string,
   cssFileName: string,
   minify: boolean,
@@ -43,6 +44,7 @@ export const createBuildCssPlugin = (
             const file = path.join(fileDir, rawUrl)
             const { fileName, content, url } = await getAssetPublicPath(
               file,
+              publicBase,
               assetsDir,
               assetsOptions
             )
