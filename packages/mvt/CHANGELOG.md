@@ -1,3 +1,19 @@
+## [0.10.2](https://github.com/linhuibin98/unbundle/compare/v0.10.1...v0.10.2) (2023-04-23)
+
+
+### Bug Fixes
+
+* fix build index asset injection ([766f5fc](https://github.com/linhuibin98/unbundle/commit/766f5fcb8a0f216069aa7a98d37b2aba5efd25a8))
+* **moduleResolve:** do not rewrite external imports ([b0c5eff](https://github.com/linhuibin98/unbundle/commit/b0c5effc58817c61f5d6ace2388f7348bcaf81cd))
+* properly handle absolute asset urls ([9d7b414](https://github.com/linhuibin98/unbundle/commit/9d7b414c978c81e46ba46c36fb6e2fc8c2bd362e))
+
+
+### Features
+
+* support CSS modules for *.module.css ([23cab58](https://github.com/linhuibin98/unbundle/commit/23cab58580a3f16533b82f0f2d8133f6b61e5bdf))
+
+
+
 ## [0.10.1](https://github.com/linhuibin98/unbundle/compare/v0.10.0...v0.10.1) (2023-04-23)
 
 
