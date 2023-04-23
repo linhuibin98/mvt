@@ -1,130 +1,97 @@
-# mvt
-
+# mvt ⚡
 > No-bundle Dev Server for Vue 3 Single-File Components.
-
-Create the following files:
-
-**index.html**
-
-```html
-<div id="app"></div>
-<script type="module">
-  import { createApp } from 'vue'
-  import Comp from './Comp.vue'
-  createApp(Comp).mount('#app')
-</script>
-```
-
-**Comp.vue**
-
-```vue
-<template>
-  <button @click="count++">{{ count }}</button>
-</template>
-<script>
-export default {
-  data: () => ({ count: 0 })
-}
-</script>
-<style scoped>
-button { color: red }
-</style>
-```
-
+## Getting Started
 ```bash
-npx mvt
+$ npx create-mvt-app <project-name>
+$ cd <project-name>
+$ npm install
+$ npm run dev
 ```
-
-`npx` will automatically install `mvt` to `npm`'s global cache before running it. Go to `http://localhost:3000`, edit the `.vue` file to see changes hot-updated instantly.
-
-## How It Works
-
-Imports are requested by the browser as native ES module imports - there's no bundling. The server intercepts requests to `*.vue` files, compiles them on the fly, and sends them back as JavaScript.
-
-## Building for Production
-
-Starting with version `^0.5.0`, you can run `mvt build` to bundle the app and deploy it for production.
-
-- `mvt build --root dir`: build files in the target directory instead of current working directory.
-
-- `mvt build --cdn`: import `vue` from a CDN link in the built js. This will make the build faster, but overall the page payload will be larger because therer will be no tree-shaking for Vue APIs.
-
-Internally, we use a highly opinionated Rollup config to generate the build. There is currently intentionally no exposed way to configure the build -- we will likely tackle that at a later stage.
-
-### API
-
-#### Dev Server
-
-You can customize the server using the API. The server can accept plugins which have access to the internal Koa app instance. You can then add custom Koa middlewares to add pre-processor support:
-
-``` js
-const { createServer } = require('@unbundle/mvt')
-const myPlugin = ({
-  root, // project root directory, absolute path
-  app, // Koa app instance
-  server, // raw http server instance
-  watcher // chokidar file watcher instance
-}) => {
-  app.use(async (ctx, next) => {
-    // You can do pre-processing here - this will be the raw incoming requests
-    // before mvt touches it.
-    if (ctx.path.endsWith('.scss')) {
-      // Note vue <style lang="xxx"> are supported by
-      // default as long as the corresponding pre-processor is installed, so this
-      // only applies to <link ref="stylesheet" href="*.scss"> or js imports like
-      // `import '*.scss'`.
-      console.log('pre processing: ', ctx.url)
-      ctx.type = 'css'
-      ctx.body = 'body { border: 1px solid red }'
-    }
-    // ...wait for mvt to do built-in transforms
-    await next()
-    // Post processing before the content is served. Note this includes parts
-    // compiled from `*.vue` files, where <template> and <script> are served as
-    // `application/javascript` and <style> are served as `text/css`.
-    if (ctx.response.is('js')) {
-      console.log('post processing: ', ctx.url)
-      console.log(ctx.body) // can be string or Readable stream
-    }
+If using Yarn:
+``` bash
+$ yarn create mvt-app <project-name>
+$ cd <project-name>
+$ yarn
+$ yarn dev
+```
+## How is This Different from a Bundler-based Setup?
+The primary difference is that for `mvt` there is no bundling during development. The ES Import syntax in your source code is served directly to the browser, and the browser parses them via native `<script module>` support, making HTTP requests for each import. The dev server intercepts the requests and performs code transforms if necessary. For example, an import to a `*.vue` file is compiled on the fly right before it's sent back to the browser.
+There are a few advantages of this approach:
+- Since there is no bundling work to be done, the server cold start is extremely fast.
+- Code is compiled on demand, so only code actually imported on the current screen is compiled. You don't have to wait until your entire app to be bundled to start developing. This can be a huge difference in apps with dozens of screens.
+- Hot module replacement (HMR) performance is decoupled from the total number of modules. This makes HMR consistently fast no matter how big your app is.
+Full page reload could be slightly slower than a bundler-based setup, since native ES imports result in network waterfalls with deep import chains. However since this is local development, the difference should be trivial compared to actual compilation time. (There is no compile cost on page reload since already compiled files are cached in memory.)
+Finally, because compilation is still done in Node, it can technically support any code transforms a bundler can, and nothing prevents you from eventually bundling the code for production. In fact, `mvt` provides a `mvt build` command to do exactly that so the app doesn't suffer from network waterfall in production.
+`mvt` is highly experimental at this stage and is not suitable for production use, but we hope to one day make it so.
+## How is This Different from [es-dev-server](https://open-wc.org/developing/es-dev-server.html)?
+`es-dev-server` is a great project and we did take some inspiration from it when refactoring `mvt` in the early stages. That said, here is why `mvt` is different from `es-dev-server` and why we didn't just implement `mvt` as a middleware for `es-dev-server`:
+- `mvt` supports Hot Module Replacement, which surgically updates the updated module without reloading the page. This is a fundamental difference in terms of development experience. `es-dev-server` internals is a bit too opaque to get this working nicely via a middleware.
+- `mvt` aims to be a single tool that integrates both the dev and the build process. You can use `mvt` to both serve and bundle the same source code, with zero configuration.
+- `mvt` requires native ES module imports. It does not intend to burden itself with support for legacy browsers.
+## Features
+### Bare Module Resolving
+Native ES imports doesn't support bare module imports like
+```js
+import { createApp } from 'vue'
+```
+The above will throw an error by default. `mvt` detects such bare module imports in all served `.js` files and rewrite them with special paths like `/@modules/vue`. Under these special paths, `mvt` performs module resolution to locate the correct files on disk:
+- `vue` has special handling: you don't need to install it since `mvt` will serve it by default. But if you want to use a specific version of `vue` (only supports Vue 3.x), you can install `vue` locally into `node_modules` and it will be preferred (`@vue/compiler-sfc` of the same version will also need to be installed).
+- If a `web_modules` directory (generated by [Snowpack](https://www.snowpack.dev/)) is present, we will try to locate it.
+- Finally we will try resolving the module from `node_modules`, using the package's `module` entry if available.
+### Hot Module Replacement
+- `*.vue` files come with HMR out of the box.
+- For `*.js` files, a simple HMR API is provided:
+  ```js
+  import { foo } from './foo.js'
+  import { hot } from '@hmr'
+  foo()
+  hot.accept('./foo.js', (newFoo) => {
+    // the callback receives the updated './foo.js' module
+    newFoo.foo()
   })
-}
-createServer({
-  plugins: [
-    myPlugin
-  ]
-}).listen(3000)
-```
-
-#### Build
-
-``` js
-const { build } = require('@unbundle/mvt')
-;(async () => {
-  // All options are optional.
-  // check out `src/node/build.ts` for full options interface.
-  const result = await build({
-    rollupInputOptions: {
-      // https://rollupjs.org/guide/en/#big-list-of-options
-    },
-    rollupOutputOptions: {
-      // https://rollupjs.org/guide/en/#big-list-of-options
-    },
-    rollupPluginVueOptions: {
-      // https://github.com/vuejs/rollup-plugin-vue/tree/next#options
-    },
-    root: process.cwd(),
-    cdn: false,
-    write: true,
-    minify: true,
-    silent: false
+  // Can also accept an array of dep modules:
+  hot.accept(['./foo.js', './bar.js'], ([newFooModule, newBarModule]) => {
+    // the callback receives the updated mdoules in an Array
   })
-})()
-```
+  ```
+  Modules can also be self-accepting:
+  ```js
+  import { hot } from '@hmr'
+  export const count = 1
+  hot.accept(newModule => {
+    console.log('updated: count is now ', newModule.count)
+  })
+  ```
+  Note that `mvt`'s HMR does not actually swap the originally imported module: if an accepting module re-exports imports from a dep, then it is responsible for updating those re-exports (and these exports must be using `let`). In addition, importers up the chain from the accepting module will not be notified of the change.
 
-## TODOs
+  This simplified HMR implementation is sufficient for most dev use cases, while allowing us to skip the expensive work of generating proxy modules.
 
-- Config file support (custom import maps and plugins)
 
-## License
+### CSS / JSON Importing
 
-MIT
+You can directly import `.css` and `.json` files from JavaScript (including `<script>` tags of `*.vue` files, of course).
+
+- `.json` files exports its content as an object as the default export.
+
+- `.css` files do not export anything. Importing them leads to the side effect of them being injected to the page during dev, or being included in the final `style.css` of the production build.
+
+Both CSS and JSON imports also support Hot Module Replacement.
+
+### Relative Asset URL Handling
+
+You can reference static assets in your `*.vue` templates, styles and plain `.css` files using relative URLs based on the asset's location to the source file on your file system. This is similar to the behavior you are used to if you have used `vue-cli` or webpack's `file-loader`.
+
+Referenced assets will be copied to the dist folder with a hashed file name in the production build.
+
+### PostCSS
+
+`mvt` automatically applies your PostCSS config to all styles in `*.vue` files and imported plain `.css` files. Just install necessary plugins and add a `postcss.config.js` in your project root.
+
+Note that you do **not** need to configure PostCSS if you want to use `<style module>` in `*vue` files: it's supported out of the box.
+
+### CSS Pre-Processors
+
+Because `mvt` targets modern browsers only, it is recommend to use native CSS variables with PostCSS plugins that implements CSSWG drafts (e.g. [postcss-nesting]()) and author plain, future-standards-compliant CSS. That said, if you insist on using a CSS pre-processor, you can install the corresponding pre-processor and just use it:
+
+``` bash
+yarn add -D sass
