@@ -1,6 +1,9 @@
 import { normalizePath } from '@rollup/pluginutils'
+import path from 'pathe'
+import { isExternalUrl } from './utils'
+import { resolveVue } from './vueResolver'
 
-import type { Plugin } from 'rollup'
+import type { Plugin, RollupOutput } from 'rollup'
 
 export const scriptRE = /<script\b([^>]*)>([\s\S]*?)<\/script>/gm
 const srcRE = /\bsrc=(?:"([^"]+)"|'([^']+)'|([^'"\s]+)\b)/
@@ -34,4 +37,58 @@ export const createBuildHtmlPlugin = (
       }
     }
   }
+}
+
+export const genIndex = (
+  root: string,
+  rawIndexContent: string,
+  publicBasePath: string,
+  assetsDir: string,
+  cdn: boolean,
+  cssFileName: string,
+  bundleOutput: RollupOutput['output']
+) => {
+  let generatedIndex = rawIndexContent.replace(scriptRE, '').trim()
+
+  const injectCSS = (html: string, filename: string) => {
+    const tag = `<link rel="stylesheet" href="${publicBasePath}${path.join(
+      assetsDir,
+      filename
+    )}">`
+    if (/<\/head>/.test(html)) {
+      return html.replace(/<\/head>/, `${tag}\n</head>`)
+    } else {
+      return tag + '\n' + html
+    }
+  }
+
+  const injectScript = (html: string, filename: string) => {
+    filename = isExternalUrl(filename)
+      ? filename
+      : `${publicBasePath}${path.join(assetsDir, filename)}`
+    const tag = `<script type="module" src="${filename}"></script>`
+    if (/<\/body>/.test(html)) {
+      return html.replace(/<\/body>/, `${tag}\n</body>`)
+    } else {
+      return html + '\n' + tag
+    }
+  }
+
+  if (generatedIndex) {
+    // inject css link
+    generatedIndex = injectCSS(generatedIndex, cssFileName)
+    if (cdn) {
+      // if not inlining vue, inject cdn link so it can start the fetch early
+      generatedIndex = injectScript(generatedIndex, resolveVue(root).cdnLink)
+    }
+  }
+
+  for (const chunk of bundleOutput) {
+    if (chunk.type === 'chunk' && chunk.isEntry) {
+      // inject entry chunk to html
+      generatedIndex = injectScript(generatedIndex, chunk.fileName)
+    }
+  }
+
+  return generatedIndex
 }

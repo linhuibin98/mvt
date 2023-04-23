@@ -6,10 +6,9 @@ import slash from 'slash'
 import resolve from 'resolve-from'
 import { Resolver, createResolver } from './resolver'
 import { createBuildResolvePlugin } from './buildPluginResolve'
-import { createBuildHtmlPlugin, scriptRE } from './buildPluginHtml'
+import { createBuildHtmlPlugin, genIndex } from './buildPluginHtml'
 import { createBuildCssPlugin } from './buildPluginCss'
 import { createBuildAssetPlugin } from './buildPluginAsset'
-import { isExternalUrl } from './utils'
 
 import type { AssetsOptions } from './buildPluginAsset'
 import type {
@@ -63,12 +62,18 @@ interface BuildOptions {
   srcRoots?: string[]
   /**
    * Will be passed to rollup.rollup()
+   * https://rollupjs.org/guide/en/#big-list-of-options
    */
   rollupInputOptions?: InputOptions
   /**
    * Will be passed to bundle.generate()
+   * https://rollupjs.org/guide/en/#big-list-of-options
    */
   rollupOutputOptions?: OutputOptions
+  /**
+   * Will be passed to rollup-plugin-vue
+   * https://github.com/vuejs/rollup-plugin-vue/blob/next/src/index.ts
+   */
   rollupPluginVueOptions?: Partial<Options>
   /**
    * Whether to emit assets other than JavaScript
@@ -211,9 +216,16 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
         }
       }),
       // mvt:css
-      createBuildCssPlugin(root, publicBasePath, assetsDir, cssFileName, minify, assetsOptions),
+      createBuildCssPlugin(
+        root,
+        publicBasePath,
+        assetsDir,
+        cssFileName,
+        minify,
+        assetsOptions
+      ),
       // mvt:asset
-      createBuildAssetPlugin(publicBasePath,assetsDir, assetsOptions),
+      createBuildAssetPlugin(publicBasePath, assetsDir, assetsOptions),
       // minify with terser
       // modules: true and toplevel: true are implied with format: 'es'
       ...(minify ? [require('rollup-plugin-terser').terser()] : [])
@@ -230,77 +242,42 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     ...rollupOutputOptions
   })
 
-  let generatedIndex = indexContent && indexContent.replace(scriptRE, '').trim()
-
-  const injectCSS = (html: string, filename: string) => {
-    const tag = `<link rel="stylesheet" href="${publicBasePath}${path.join(
-      assetsDir,
-      filename
-    )}">`
-    if (/<\/head>/.test(html)) {
-      return html.replace(/<\/head>/, `${tag}\n</head>`)
-    } else {
-      return tag + '\n' + html
-    }
-  }
-
-  const injectScript = (html: string, filename: string) => {
-    filename = isExternalUrl(filename)
-      ? filename
-      : `${publicBasePath}${path.join(assetsDir, filename)}`
-    const tag = `<script type="module" src="${filename}"></script>`
-    if (/<\/body>/.test(html)) {
-      return html.replace(/<\/body>/, `${tag}\n</body>`)
-    } else {
-      return html + '\n' + tag
-    }
-  }
-
-  // TODO handle base path for injections?
-  // this would also affect paths in templates and css.
-  if (generatedIndex) {
-    // inject css link
-    generatedIndex = injectCSS(generatedIndex, cssFileName)
-    if (cdn) {
-      // if not inlining vue, inject cdn link so it can start the fetch early
-      generatedIndex = injectScript(generatedIndex, resolveVue(root).cdnLink)
-    }
-  }
+  const indexHtml = indexContent
+    ? genIndex(
+        root,
+        indexContent,
+        publicBasePath,
+        assetsDir,
+        cdn,
+        cssFileName,
+        output
+      )
+    : ''
 
   if (write) {
     await fs.remove(outDir)
     await fs.ensureDir(outDir)
-  }
 
-  // inject / write bundle
-  for (const chunk of output) {
-    if (chunk.type === 'chunk') {
-      if (chunk.isEntry && generatedIndex) {
-        // inject chunk to html
-        generatedIndex = injectScript(generatedIndex, chunk.fileName)
-      }
-      // write chunk
-      if (write) {
+    for (const chunk of output) {
+      if (chunk.type === 'chunk') {
+        // write chunk
         const filepath = path.join(resolvedAssetsPath, chunk.fileName)
         await writeFile(filepath, chunk.code, WriteType.JS)
+      } else if (emitAssets) {
+        // write asset
+        const filepath = path.join(resolvedAssetsPath, chunk.fileName)
+        await writeFile(
+          filepath,
+          chunk.source,
+          chunk.fileName.endsWith('.css') ? WriteType.CSS : WriteType.ASSET
+        )
       }
-    } else if (emitAssets && write) {
-      // write asset
-      const filepath = path.join(resolvedAssetsPath, chunk.fileName)
-      await writeFile(
-        filepath,
-        chunk.source,
-        chunk.fileName.endsWith('.css') ? WriteType.CSS : WriteType.ASSET
-      )
     }
   }
 
-  if (write) {
-    // write html
-    if (generatedIndex) {
-      const indexOutPath = path.join(outDir, 'index.html')
-      await writeFile(indexOutPath, generatedIndex, WriteType.HTML)
-    }
+  // write html
+  if (indexHtml) {
+    await writeFile(path.join(outDir, 'index.html'), indexHtml, WriteType.HTML)
   }
 
   !silent &&
@@ -310,7 +287,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
 
   return {
     assets: output,
-    html: generatedIndex || ''
+    html: indexHtml
   }
 }
 
