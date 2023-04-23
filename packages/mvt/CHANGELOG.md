@@ -1,3 +1,13 @@
+## [0.10.1](https://github.com/linhuibin98/unbundle/compare/v0.10.0...v0.10.1) (2023-04-23)
+
+
+### Bug Fixes
+
+* crash when importing component with no script tag ([b1e808b](https://github.com/linhuibin98/unbundle/commit/b1e808b2cb0d6752002e35efff695040f8fc9612))
+* should not write assets when buildOptions.write is false ([bca12e3](https://github.com/linhuibin98/unbundle/commit/bca12e3134f19ce053b2d152898f8b287b9ff07b))
+
+
+
 # [0.10.0](https://github.com/linhuibin98/unbundle/compare/v0.9.1...v0.10.0) (2023-04-21)
 
 
