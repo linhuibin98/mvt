@@ -11,6 +11,7 @@ import { createBuildCssPlugin } from './buildPluginCss'
 import { createBuildAssetPlugin } from './buildPluginAsset'
 import { isExternalUrl } from './utils'
 
+import type { AssetsOptions } from './buildPluginAsset'
 import type {
   rollup as Rollup,
   InputOptions,
@@ -44,6 +45,10 @@ interface BuildOptions {
    * Defaults to `assets`
    */
   assetsDir?: string
+  /**
+   * The option with process assets. eg.image
+   */
+  assetsOptions?: AssetsOptions
   /**
    * List files that are included in the build, but not inside project root.
    * e.g. if you are building a higher level tool on top of mvt and includes
@@ -108,6 +113,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     cdn = !resolveVue(root).hasLocalVue,
     outDir = path.resolve(root, 'dist'),
     assetsDir = 'assets',
+    assetsOptions = {},
     resolvers = [],
     srcRoots = [],
     rollupInputOptions = {},
@@ -196,9 +202,9 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
         }
       }),
       // mvt:css
-      createBuildCssPlugin(root, assetsDir, cssFileName, minify),
+      createBuildCssPlugin(root, assetsDir, cssFileName, minify, assetsOptions),
       // mvt:asset
-      createBuildAssetPlugin(assetsDir),
+      createBuildAssetPlugin(assetsDir, assetsOptions),
       // minify with terser
       // modules: true and toplevel: true are implied with format: 'es'
       ...(minify ? [require('rollup-plugin-terser').terser()] : [])

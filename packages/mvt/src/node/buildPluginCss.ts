@@ -3,6 +3,7 @@ import { getAssetPublicPath, registerAssets } from './buildPluginAsset'
 import { loadPostcssConfig } from './config'
 import { isExternalUrl } from './utils'
 
+import type { AssetsOptions } from './buildPluginAsset'
 import type { Plugin } from 'rollup'
 
 const debug = require('debug')('mvt:css')
@@ -13,7 +14,8 @@ export const createBuildCssPlugin = (
   root: string,
   assetsDir: string,
   cssFileName: string,
-  minify: boolean
+  minify: boolean,
+  assetsOptions: AssetsOptions
 ): Plugin => {
   const styles: Map<string, string> = new Map()
   const assets = new Map()
@@ -41,7 +43,8 @@ export const createBuildCssPlugin = (
             const file = path.join(fileDir, rawUrl)
             const { fileName, content, url } = await getAssetPublicPath(
               file,
-              assetsDir
+              assetsDir,
+              assetsOptions
             )
             assets.set(fileName, content)
             debug(`url(${rawUrl}) -> url(${url})`)
