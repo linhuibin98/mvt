@@ -90,15 +90,10 @@ describe('mvt', () => {
         )
 
         const button = await page.$('button')
-        const maxTries = 10
-        for (let tries = 0; tries < maxTries; tries++) {
-            const text = await button.evaluate((b) => b.textContent)
-            if (text === 'count is 1' || tries === maxTries - 1) {
-                expect(text).toBe('count is 1')
-            } else {
-                await timeout(200)
-            }
-        }
+
+        await testByPolling('count is 1', () => {
+            return button.evaluate((b) => b.textContent)
+        })
     })
 
     test('import plain css', async () => {
@@ -109,3 +104,16 @@ describe('mvt', () => {
 
     // TODO test node_modules resolution
 })
+
+// poll until it updates
+async function testByPolling(expectValue, poll) {
+    const maxTries = 10
+    for (let tries = 0; tries < maxTries; tries++) {
+        const actual = await poll()
+        if (actual === expectValue || tries === maxTries - 1) {
+            expect(actual).toBe(expectValue)
+        } else {
+            await timeout(200)
+        }
+    }
+}
