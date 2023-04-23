@@ -27,7 +27,13 @@ Finally, because compilation is still done in Node, it can technically support a
 `es-dev-server` is a great project and we did take some inspiration from it when refactoring `mvt` in the early stages. That said, here is why `mvt` is different from `es-dev-server` and why we didn't just implement `mvt` as a middleware for `es-dev-server`:
 - `mvt` supports Hot Module Replacement, which surgically updates the updated module without reloading the page. This is a fundamental difference in terms of development experience. `es-dev-server` internals is a bit too opaque to get this working nicely via a middleware.
 - `mvt` aims to be a single tool that integrates both the dev and the build process. You can use `mvt` to both serve and bundle the same source code, with zero configuration.
-- `mvt` requires native ES module imports. It does not intend to burden itself with support for legacy browsers.
+
+## Browser Support
+
+`mvt` requires [native ES module imports](https://caniuse.com/#feat=es6-module) during development. The production build also relies on dynamic imports for code-splitting (which can be [polyfilled](https://github.com/GoogleChromeLabs/dynamic-import-polyfill)).
+
+`mvt` assumes you are targeting modern browsers and therefore does not perform any compatibility-oriented traspilations by default. Technically, you *can* add `autoprefixer` yourself using a PostCSS config file, or add necessary polyfills and post-processing steps to make your code work in legacy browsers - however that is not `mvt`'s concern by design.
+
 ## Features
 ### Bare Module Resolving
 Native ES imports doesn't support bare module imports like
