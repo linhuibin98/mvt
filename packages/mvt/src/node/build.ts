@@ -1,5 +1,5 @@
 import path from 'pathe'
-import { promises as fs } from 'fs'
+import fs from 'fs-extra'
 import { resolveVue } from './vueResolver'
 import chalk from 'chalk'
 import slash from 'slash'
@@ -179,8 +179,8 @@ export async function build(
   }
 
   if (write) {
-    await fs.rm(outDir, { recursive: true, force: true })
-    await fs.mkdir(outDir, { recursive: true })
+    await fs.remove(outDir)
+    await fs.ensureDir(outDir)
   }
 
   // inject / write bundle
@@ -197,7 +197,7 @@ export async function build(
           console.log(
             `write ${chalk.cyan(path.relative(process.cwd(), filepath))}`
           )
-        await fs.mkdir(path.dirname(filepath), { recursive: true })
+        await fs.ensureDir(path.dirname(filepath))
         await fs.writeFile(filepath, chunk.code)
       }
     } else if (emitAssets && write) {
@@ -207,7 +207,7 @@ export async function build(
         console.log(
           `write ${chalk.magenta(path.relative(process.cwd(), filepath))}`
         )
-      await fs.mkdir(path.dirname(filepath), { recursive: true })
+      await fs.ensureDir(path.dirname(filepath))
       await fs.writeFile(filepath, chunk.source)
     }
   }

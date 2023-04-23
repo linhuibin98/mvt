@@ -1,5 +1,5 @@
 import path from 'pathe'
-import { promises as fs } from 'fs'
+import fs from 'fs-extra'
 import { isStaticAsset } from './utils'
 import hash from 'hash-sum'
 import slash from 'slash'
