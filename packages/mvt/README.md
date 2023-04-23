@@ -95,3 +95,101 @@ Because `mvt` targets modern browsers only, it is recommend to use native CSS va
 
 ``` bash
 yarn add -D sass
+```
+``` vue
+<style lang="scss">
+/* use scss */
+</style>
+```
+
+Note importing CSS / preprocessor files from `.js` files, and HMR from imported pre-processor files are currently not supported, but can be in the future.
+
+### Building for Production
+
+Starting with version `^0.5.0`, you can run `mvt build` to bundle the app and deploy it for production.
+
+- `mvt build --root dir`: build files in the target directory instead of current working directory.
+
+- `mvt build --cdn`: import `vue` from a CDN link in the built js. This will make the build faster, but overall the page payload will be larger because therer will be no tree-shaking for Vue APIs.
+
+Internally, we use a highly opinionated Rollup config to generate the build. There's not much you can configure from the command line, but if you use the API, then the build is configurable by passing on most options to Rollup (see below).
+
+### API
+
+#### Dev Server
+
+You can customize the server using the API. The server can accept plugins which have access to the internal Koa app instance. You can then add custom Koa middlewares to add pre-processor support:
+
+``` js
+const { createServer } = require('@unbundle/mvt')
+const myPlugin = ({
+  root, // project root directory, absolute path
+  app, // Koa app instance
+  server, // raw http server instance
+  watcher // chokidar file watcher instance
+}) => {
+  app.use(async (ctx, next) => {
+    // You can do pre-processing here - this will be the raw incoming requests
+    // before mvt touches it.
+    if (ctx.path.endsWith('.scss')) {
+      // Note vue <style lang="xxx"> are supported by
+      // default as long as the corresponding pre-processor is installed, so this
+      // only applies to <link ref="stylesheet" href="*.scss"> or js imports like
+      // `import '*.scss'`.
+      console.log('pre processing: ', ctx.url)
+      ctx.type = 'css'
+      ctx.body = 'body { border: 1px solid red }'
+    }
+    // ...wait for mvt to do built-in transforms
+    await next()
+    // Post processing before the content is served. Note this includes parts
+    // compiled from `*.vue` files, where <template> and <script> are served as
+    // `application/javascript` and <style> are served as `text/css`.
+    if (ctx.response.is('js')) {
+      console.log('post processing: ', ctx.url)
+      console.log(ctx.body) // can be string or Readable stream
+    }
+  })
+}
+createServer({
+  plugins: [
+    myPlugin
+  ]
+}).listen(3000)
+```
+
+#### Build
+
+``` js
+const { build } = require('@unbundle/mvt')
+;(async () => {
+  // All options are optional.
+  // check out `src/node/build.ts` for full options interface.
+  const result = await build({
+    rollupInputOptions: {
+      // https://rollupjs.org/guide/en/#big-list-of-options
+    },
+    rollupOutputOptions: {
+      // https://rollupjs.org/guide/en/#big-list-of-options
+    },
+    rollupPluginVueOptions: {
+      // https://github.com/vuejs/rollup-plugin-vue/tree/next#options
+    },
+    root: process.cwd(),
+    cdn: false,
+    write: true,
+    minify: true,
+    silent: false
+  })
+})()
+```
+
+## TODOs
+
+- Public base path support
+- Config file support (custom import maps and plugins)
+- Support TypeScript / Flow /(P)React JSX via [Sucrase](https://github.com/alangpierce/sucrase)
+
+## License
+
+MIT

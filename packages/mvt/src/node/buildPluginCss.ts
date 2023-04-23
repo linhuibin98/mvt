@@ -57,7 +57,7 @@ export const createBuildCssPlugin = (
             })
             code = result.css
           } catch (e) {
-            console.error(`[vite] error applying postcss transforms: `, e)
+            console.error(`[mvt] error applying postcss transforms: `, e)
           }
         }
 
