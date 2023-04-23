@@ -9,6 +9,7 @@ import { createBuildResolvePlugin } from './buildPluginResolve'
 import { createBuildHtmlPlugin, scriptRE } from './buildPluginHtml'
 import { createBuildCssPlugin } from './buildPluginCss'
 import { createBuildAssetPlugin } from './buildPluginAsset'
+import { isExternalUrl } from './utils'
 
 import type {
   rollup as Rollup,
@@ -97,7 +98,9 @@ export async function build(
       ...(indexContent ? [createBuildHtmlPlugin(indexPath, indexContent)] : []),
       // vue
       require('rollup-plugin-vue')({
-        transformAssetUrls: true,
+        transformAssetUrls: {
+          includeAbsolute: true
+        },
         // TODO: for now we directly handle pre-processors in rollup-plugin-vue
         // so that we don't need to install dedicated rollup plugins.
         // In the future we probably want to still use rollup plugins so that
@@ -153,7 +156,7 @@ export async function build(
   }
 
   const injectScript = (html: string, filename: string) => {
-    filename = /^https?:\/\//.test(filename)
+    filename = isExternalUrl(filename)
       ? filename
       : `/${path.join(assetsDir, filename)}`
     const tag = `<script type="module" src="${filename}"></script>`

@@ -12,7 +12,7 @@ import {
   rewriteFileWithHMR,
   hmrClientPublicPath
 } from './serverPluginHmr'
-import { readBody, cleanUrl, queryRE } from './utils'
+import { readBody, cleanUrl, queryRE, isExternalUrl } from './utils'
 
 import type { InternalResolver } from './resolver'
 import type { Plugin } from './server'
@@ -141,7 +141,7 @@ function rewriteImports(
         }
         if (dynamicIndex === -1 || hasLiteralDynamicId) {
           // do not rewrite external imports
-          if (/https?:\/\//.test(id)) {
+          if (isExternalUrl(id)) {
             return
           }
 

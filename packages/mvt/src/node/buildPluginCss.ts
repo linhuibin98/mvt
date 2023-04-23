@@ -1,12 +1,13 @@
 import path from 'pathe'
 import { getAssetPublicPath, registerAssets } from './buildPluginAsset'
 import { loadPostcssConfig } from './config'
+import { isExternalUrl } from './utils'
 
 import type { Plugin } from 'rollup'
 
 const debug = require('debug')('mvt:css')
 
-const urlRE = /(url\(\s*['"]?)([^"')]+)(["']?\s*\))/g
+const urlRE = /(url\(\s*['"]?)([^"')]+)(["']?\s*\))/
 
 export const createBuildCssPlugin = (
   root: string,
@@ -32,7 +33,12 @@ export const createBuildCssPlugin = (
           while ((match = urlRE.exec(remaining))) {
             rewritten += remaining.slice(0, match.index)
             const [matched, before, rawUrl, after] = match
-            const file = path.resolve(fileDir, rawUrl)
+            if (isExternalUrl(rawUrl)) {
+              rewritten += matched
+              remaining = remaining.slice(match.index + matched.length)
+              return
+            }
+            const file = path.join(fileDir, rawUrl)
             const { fileName, content, url } = await getAssetPublicPath(
               file,
               assetsDir
