@@ -1,6 +1,6 @@
 import path from 'pathe'
 import { promises as fs } from 'fs'
-import { resolveVue } from './resolveVue'
+import { resolveVue } from './vueResolver'
 import chalk from 'chalk'
 import slash from 'slash'
 import resolve from 'resolve-from'

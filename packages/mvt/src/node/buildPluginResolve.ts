@@ -1,4 +1,4 @@
-import { resolveVue } from './resolveVue'
+import { resolveVue } from './vueResolver'
 import { hmrClientId } from './serverPluginHmr'
 
 import type { Plugin } from 'rollup'

@@ -5,7 +5,7 @@ import {
   SFCStyleBlock,
   SFCStyleCompileResults
 } from '@vue/compiler-sfc'
-import { resolveCompiler } from './resolveVue'
+import { resolveCompiler } from './vueResolver'
 import hash from 'hash-sum'
 import { cachedRead } from './utils'
 import LRUCache from 'lru-cache'
