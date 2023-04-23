@@ -2,7 +2,7 @@
     "name": "create-mvt-app",
     "version": "1.0.0",
     "license": "MIT",
-    "author": "linhuibin98",
+    "author": "linhuibin98 <1032352370@qq.com>",
     "main": "index.js",
     "bin": {
       "create-mvt-app": "index.js"
@@ -16,10 +16,14 @@
     },
     "repository": {
       "type": "git",
-      "url": "git+https://github.com/linhuibin98/mvt.git"
+      "url": "git+https://github.com/linhuibin98/unbundle.git"
     },
     "bugs": {
-      "url": "https://github.com/linhuibin98/mvt/issues"
+      "url": "https://github.com/linhuibin98/unbundle/issues"
     },
-    "homepage": "https://github.com/linhuibin98/mvt/tree/main/#readme"
+    "homepage": "https://github.com/linhuibin98/unbundle/blob/main/packages/create-mvt-app/README.md",
+    "publishConfig": {
+      "registry": "https://registry.npmjs.org/",
+      "access": "public"
+    }
   }
