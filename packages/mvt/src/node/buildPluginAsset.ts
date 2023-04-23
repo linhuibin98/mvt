@@ -10,7 +10,7 @@ import type { Plugin, OutputBundle } from 'rollup'
 const debug = require('debug')('mvt:build:asset')
 
 // TODO make this configurable
-const inlineThreshold = 10000
+const inlineThreshold = 4096
 
 export const getAssetPublicPath = async (id: string, assetsDir: string) => {
   const ext = path.extname(id)
