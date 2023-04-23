@@ -244,8 +244,10 @@ function compileSFCTemplate(
     },
     compilerOptions: {
       runtimeModuleName: '/@modules/vue',
-      scopeId: scoped ? `data-v-${hash(publicPath)}` : null
-    }
+      scopeId: scoped ? `data-v-${hash(publicPath)}` : null,
+    },
+    preprocessLang: template.lang,
+    preprocessCustomRequire: (id: string) => require(resolve(root, id))
   })
 
   if (errors.length) {
