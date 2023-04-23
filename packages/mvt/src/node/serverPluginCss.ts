@@ -103,7 +103,7 @@ export const cssPlugin: Plugin = ({ root, app, watcher, resolver }) => {
           })
         ).css
       } catch (e) {
-        console.error(`[vite] error applying postcss transforms: `, e)
+        console.error(`[mvt] error applying postcss transforms: `, e)
       }
     }
 

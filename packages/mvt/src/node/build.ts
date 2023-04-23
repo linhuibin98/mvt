@@ -15,24 +15,65 @@ import type {
   rollup as Rollup,
   InputOptions,
   OutputOptions,
-  RollupOutput
+  RollupOutput,
+  ExternalOption
 } from 'rollup'
 import type { Options } from 'rollup-plugin-vue'
 
 interface BuildOptions {
+  /**
+   * Project root path on file system.
+   */
   root?: string
+  /**
+   * If true, will be importing Vue from a CDN.
+   * Dsiabled automatically when a local vue installation is present.
+   */
   cdn?: boolean
+  /**
+   * Resolvers to map dev server public path requests to/from file system paths,
+   * and optionally map module ids to public path requests.
+   */
   resolvers?: Resolver[]
+  /**
+   * Defaults to `dist`
+   */
   outDir?: string
+  /**
+   * Nest js / css / static assets under a directory under `outDir`.
+   * Defaults to `assets`
+   */
   assetsDir?: string
-  // list files that are included in the build, but not inside project root.
+  /**
+   * List files that are included in the build, but not inside project root.
+   * e.g. if you are building a higher level tool on top of mvt and includes
+   * some code that will be bundled into the final build.
+   */
   srcRoots?: string[]
+  /**
+   * Will be passed to rollup.rollup()
+   */
   rollupInputOptions?: InputOptions
+  /**
+   * Will be passed to bundle.generate()
+   */
   rollupOutputOptions?: OutputOptions
   rollupPluginVueOptions?: Partial<Options>
+  /**
+   * Whether to emit assets other than JavaScript
+   */
   emitAssets?: boolean
-  write?: boolean // if false, does not write to disk.
-  minify?: boolean // if true, generates non-minified code for inspection.
+  /**
+   * Whether to write bundle to disk
+   */
+  write?: boolean
+  /**
+   * Whether to minify output
+   */
+  minify?: boolean
+  /**
+   * Whether to log asset info to console
+   */
   silent?: boolean
 }
 
@@ -41,9 +82,13 @@ export interface BuildResult {
   assets: RollupOutput['output']
 }
 
+/**
+ * Bundles the app for production.
+ * Returns a Promise containing the build result.
+ */
 export async function build(
   options: BuildOptions = {}
-): Promise<BuildResult | BuildResult[]> {
+): Promise<BuildResult> {
   process.env.NODE_ENV = 'production'
   const start = Date.now()
   const {
@@ -167,7 +212,7 @@ export async function build(
     }
   }
 
-  // TODO handle public path for injections?
+  // TODO handle base path for injections?
   // this would also affect paths in templates and css.
   if (generatedIndex) {
     // inject css link
@@ -232,5 +277,56 @@ export async function build(
   return {
     assets: output,
     html: generatedIndex || ''
+  }
+}
+
+/**
+ * Bundles the app in SSR mode.
+ * - All Vue dependencies are automatically externalized
+ * - Imports to dependencies are compiled into require() calls
+ * - Templates are compiled with SSR specific optimizations.
+ */
+export function ssrBuild(options: BuildOptions = {}): Promise<BuildResult> {
+  const { rollupInputOptions, rollupOutputOptions, rollupPluginVueOptions } =
+    options
+
+  return build({
+    ...options,
+    rollupPluginVueOptions: {
+      ...rollupPluginVueOptions,
+      target: 'node'
+    },
+    rollupInputOptions: {
+      ...rollupInputOptions,
+      external: resolveExternal(
+        rollupInputOptions && rollupInputOptions.external
+      )
+    },
+    rollupOutputOptions: {
+      ...rollupOutputOptions,
+      format: 'cjs',
+      exports: 'named'
+    }
+  })
+}
+
+function resolveExternal(
+  userExternal: ExternalOption | undefined
+): ExternalOption {
+  const required = ['vue', /^@vue\//]
+  if (!userExternal) {
+    return required
+  }
+  if (Array.isArray(userExternal)) {
+    return [...required, ...userExternal]
+  } else if (typeof userExternal === 'function') {
+    return (src, importer, isResolved) => {
+      if (src === 'vue' || /^@vue\//.test(src)) {
+        return true
+      }
+      return userExternal(src, importer, isResolved)
+    }
+  } else {
+    return [...required, userExternal]
   }
 }
