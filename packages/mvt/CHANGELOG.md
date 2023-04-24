@@ -1,3 +1,20 @@
+## [0.10.3](https://github.com/linhuibin98/unbundle/compare/v0.10.2...v0.10.3) (2023-04-24)
+
+
+### Bug Fixes
+
+* fix module entry redirect on Windows ([f9ed846](https://github.com/linhuibin98/unbundle/commit/f9ed84648abd2ff9c4a5437a660d924132741dfd))
+* only log target exist when error says so ([a13c29f](https://github.com/linhuibin98/unbundle/commit/a13c29ff49ab4e07ebcd5413036472a3db72df25))
+
+
+### Features
+
+* add asset options into build options ([a457f5e](https://github.com/linhuibin98/unbundle/commit/a457f5e3e539d4b257f8af0be0f0ebb88f339044))
+* public base path support ([91f1d8c](https://github.com/linhuibin98/unbundle/commit/91f1d8c416ae8bc8dfae576c0c29f29aa6fc23bb))
+* support ssrBuild ([4c252b4](https://github.com/linhuibin98/unbundle/commit/4c252b4b864ecacd1bce982375300b40f9589a18))
+
+
+
 ## [0.10.2](https://github.com/linhuibin98/unbundle/compare/v0.10.1...v0.10.2) (2023-04-23)
 
 
