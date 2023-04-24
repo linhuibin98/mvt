@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "outDir": "../../dist",
     "module": "commonjs",
-    "lib": ["ESNext"]
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["./"]
 }

@@ -61,6 +61,7 @@
     "cssnano": "^6.0.0",
     "debug": "^4.3.4",
     "es-module-lexer": "^1.2.0",
+    "esbuild": "^0.17.18",
     "etag": "^1.8.1",
     "fs-extra": "^11.1.1",
     "hash-sum": "^2.0.0",

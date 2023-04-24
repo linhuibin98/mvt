@@ -10,6 +10,7 @@
     "noUnusedLocals": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
-    "removeComments": false
+    "removeComments": false,
+    "skipLibCheck": true
   }
 }
