@@ -160,9 +160,9 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
   )
 
   const minifyPlugin = minify
-    ? minify === 'terser'
-      ? require('rollup-plugin-terser').terser()
-      : await createMinifyPlugin()
+    ? minify === 'esbuild'
+      ? await createMinifyPlugin()
+      : require('rollup-plugin-terser').terser()
     : null
 
   // lazy require rollup so that we don't load it when only using the dev server
