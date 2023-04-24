@@ -1,7 +1,7 @@
 import { transform as esbuildTransform, TransformOptions } from 'esbuild'
 import { Plugin } from 'rollup'
 
-const transform = async (
+export const transform = async (
   code: string,
   options: TransformOptions,
   operation: string
