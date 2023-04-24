@@ -54,6 +54,7 @@
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/pluginutils": "^5.0.2",
+    "@vue/compiler-dom": "^3.2.47",
     "@vue/compiler-sfc": "^3.2.47",
     "chalk": "^4",
     "chokidar": "^3.5.3",

@@ -1,9 +1,8 @@
 import path from 'pathe'
-import { getAssetPublicPath, registerAssets } from './buildPluginAsset'
+import { resolveAsset, registerAssets } from './buildPluginAsset'
 import { loadPostcssConfig } from './config'
 import { isExternalUrl } from './utils'
 
-import type { AssetsOptions } from './buildPluginAsset'
 import type { Plugin } from 'rollup'
 
 const debug = require('debug')('mvt:build:css')
@@ -16,7 +15,7 @@ export const createBuildCssPlugin = (
   assetsDir: string,
   cssFileName: string,
   minify: boolean,
-  assetsOptions: AssetsOptions
+  inlineLimit: number
 ): Plugin => {
   const styles: Map<string, string> = new Map()
   const assets = new Map()
@@ -42,11 +41,11 @@ export const createBuildCssPlugin = (
               return
             }
             const file = path.join(fileDir, rawUrl)
-            const { fileName, content, url } = await getAssetPublicPath(
+            const { fileName, content, url } = await resolveAsset(
               file,
               publicBase,
               assetsDir,
-              assetsOptions
+              inlineLimit
             )
             assets.set(fileName, content)
             debug(`url(${rawUrl}) -> url(${url})`)

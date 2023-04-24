@@ -9,37 +9,43 @@ import type { Plugin, OutputBundle } from 'rollup'
 
 const debug = require('debug')('mvt:build:asset')
 
-export interface AssetsOptions {
-  inlineThreshold?: number
+interface AssetCacheEntry {
+  content: Buffer
+  fileName: string
+  url: string
 }
 
-const defaultAssetsOptions: AssetsOptions = {
-  inlineThreshold: 4096
-}
+const assetResolveCache = new Map<string, AssetCacheEntry>()
 
-export const getAssetPublicPath = async (
+export const resolveAsset = async (
   id: string,
   publicBase: string,
   assetsDir: string,
-  assetsOptions: AssetsOptions
-) => {
+  inlineLimit: number
+): Promise<AssetCacheEntry> => {
+  const cached = assetResolveCache.get(id)
+  if (cached) {
+    return cached
+  }
+
   const ext = path.extname(id)
   const baseName = path.basename(id, ext)
   const resolvedFileName = `${baseName}.${hash(slash(id))}${ext}`
 
   let url = slash(path.join(publicBase, assetsDir, resolvedFileName))
   const content = await fs.readFile(id)
-  if (!id.endsWith(`.svg`)) {
-    if (content.length < assetsOptions.inlineThreshold!) {
-      url = `data:${mime.lookup(id)};base64,${content.toString('base64')}`
-    }
+  if (!id.endsWith(`.svg`) && content.length < inlineLimit) {
+    url = `data:${mime.lookup(id)};base64,${content.toString('base64')}`
   }
 
-  return {
+  const resolved = {
     content,
     fileName: resolvedFileName,
     url
   }
+
+  assetResolveCache.set(id, resolved)
+  return resolved
 }
 
 export const registerAssets = (
@@ -60,19 +66,18 @@ export const registerAssets = (
 export const createBuildAssetPlugin = (
   publicBase: string,
   assetsDir: string,
-  assetsOptions: AssetsOptions
+  inlineLimit: number
 ): Plugin => {
   const assets = new Map()
-  assetsOptions = { ...defaultAssetsOptions, ...assetsOptions }
   return {
     name: 'mvt:asset',
     async load(id) {
       if (isStaticAsset(id)) {
-        const { fileName, content, url } = await getAssetPublicPath(
+        const { fileName, content, url } = await resolveAsset(
           id,
           publicBase,
           assetsDir,
-          assetsOptions
+          inlineLimit
         )
         assets.set(fileName, content)
         debug(`${id} -> ${url}`)
