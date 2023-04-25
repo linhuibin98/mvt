@@ -9,7 +9,7 @@
         "vue": "^3.2.47"
     },
     "devDependencies": {
-        "@unbundle/mvt": "^0.10.0",
+        "@unbundle/mvt": "^0.11.0",
         "@vue/compiler-sfc": "^3.2.47"
     }
   }
