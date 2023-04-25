@@ -162,9 +162,7 @@ async function compileSFCMain(
   if (descriptor.script) {
     let content = descriptor.script.content
     if (descriptor.script.lang === 'ts') {
-      content = (
-        await transform(content, { loader: 'ts' }, `transpiling ${publicPath}`)
-      ).code
+      content = (await transform(content, publicPath, { loader: 'ts' })).code
     }
     code += content.replace(`export default`, 'const __script =')
   } else {
@@ -247,7 +245,7 @@ function compileSFCTemplate(
     },
     compilerOptions: {
       runtimeModuleName: '/@modules/vue',
-      scopeId: scoped ? `data-v-${hash(publicPath)}` : null,
+      scopeId: scoped ? `data-v-${hash(publicPath)}` : null
     },
     preprocessLang: template.lang,
     preprocessCustomRequire: (id: string) => require(resolve(root, id))
