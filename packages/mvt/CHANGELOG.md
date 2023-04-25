@@ -1,3 +1,7 @@
+## [0.11.1](https://github.com/linhuibin98/unbundle/compare/v0.11.0...v0.11.1) (2023-04-25)
+
+
+
 # [0.11.0](https://github.com/linhuibin98/unbundle/compare/v0.10.3...v0.11.0) (2023-04-25)
 
 
