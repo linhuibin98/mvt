@@ -80,7 +80,7 @@ export const createBuildAssetPlugin = (
           inlineLimit
         )
         assets.set(fileName, content)
-        debug(`${id} -> ${url}`)
+        debug(`${id} -> ${url.startsWith('data:') ? `base64 inlined` : url}`)
         return `export default ${JSON.stringify(url)}`
       }
     },
