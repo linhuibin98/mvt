@@ -25,11 +25,13 @@ $ yarn dev
 
 - [Bare Module Resolving](#bare-module-resolving)
 - [Hot Module Replacement](#hot-module-replacement)
+- [TypeScript](#typescript)
 - [CSS / JSON Importing](#css--json-importing)
 - [Asset URL Handling](#asset-url-handling)
 - [PostCSS](#postcss)
 - [CSS Modules](#css-modules)
 - [CSS Pre-processors](#css-pre-processors)
+- [JSX](#jsx)
 - [Production Build](#production-build)
 
 `mvt` tries to mirror the default configuration in [vue-cli](http://cli.vuejs.org/) as much as possible. If you've used `vue-cli` or other webpack-based boilerplates before, you should feel right at home. That said, do expect things to be different here and there.
@@ -71,6 +73,9 @@ The above will throw an error by default. `mvt` detects such bare module imports
 
   This simplified HMR implementation is sufficient for most dev use cases, while allowing us to skip the expensive work of generating proxy modules.
 
+### TypeScript
+
+Starting with v0.11, `mvt` supports `<script lang="ts">` in `*.vue` files, and importing `.ts` files out of the box. Note that `mvt` does **NOT** perform type checking - it assumes type checking is taken care of by your IDE and build process (you can run `tsc --noEmit` in the build script). With that in mind, `mvt` uses [esbuild](https://github.com/evanw/esbuild) to transpile TypeScript into JavaScript which is about 20~30x faster than vanilla `tsc`.
 
 ### CSS / JSON Importing
 
@@ -108,6 +113,27 @@ yarn add -D sass
 ```
 
 Note importing CSS / preprocessor files from `.js` files, and HMR from imported pre-processor files are currently not supported, but can be in the future.
+
+### JSX
+
+`.jsx` and `.tsx` files are also supported out of the box. JSX transpilation is also handled via `esbuild`.
+
+Because React doesn't ship ES module builds, you either need to use [es-react](https://github.com/lukejacksonn/es-react), or pre-bundle React into a ES module with Snowpack. Easiest way to get it running is:
+
+``` js
+import { React, ReactDOM } from 'https://unpkg.com/es-react'
+ReactDOM.render(<h1>Hello, what!</h1>, document.getElementById("app"));
+```
+
+JSX can also be customized via `--jsx-factory` and `--jsx-fragment` flags from the CLI or `jsx: { factory, fragment }` fro the API. For example, to use [Preact](https://preactjs.com/) with `mvt`:
+
+#### Notes on JSX Support
+
+- Vue 3's JSX transform is still WIP, so `mvt`'s JSX support currently only targets React/Preact.
+
+- React doesn't ship ES module builds, so it must be pre-bundled with Snowpack to work.
+
+- There is no out-of-the-box HMR when using non-Vue frameworks, but userland HMR support is technically via the server API.
 
 ### Production Build
 
