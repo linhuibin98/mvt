@@ -1,3 +1,20 @@
+# [0.11.0](https://github.com/linhuibin98/unbundle/compare/v0.10.3...v0.11.0) (2023-04-25)
+
+
+### Bug Fixes
+
+* fix direct index script src hmr ([c74f61c](https://github.com/linhuibin98/unbundle/commit/c74f61cd35014e4941892a890cff9244116ecaaa))
+
+
+### Features
+
+* dev support for ts ([ea5e0ac](https://github.com/linhuibin98/unbundle/commit/ea5e0acaca6bdd9ceebeda3c954682c358cfd93d))
+* support minification with esbuild ([20c5044](https://github.com/linhuibin98/unbundle/commit/20c5044f0eacc8c354ae3c1e9e47b04b65b35dde))
+* ts build support for vue files ([03f0da1](https://github.com/linhuibin98/unbundle/commit/03f0da16f8042b3753c39521f01d41425b2e14ec))
+* tsx? support for build ([d71cea5](https://github.com/linhuibin98/unbundle/commit/d71cea586e7aa22eaa11923cc901bcc58d7b1b75))
+
+
+
 ## [0.10.3](https://github.com/linhuibin98/unbundle/compare/v0.10.2...v0.10.3) (2023-04-24)
 
 
