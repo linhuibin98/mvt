@@ -16,9 +16,10 @@ export const createEsbuildPlugin = async (
 
   return {
     name: 'mvt:esbuild',
-    async transform(code, file) {
-      if (tjsxRE.test(file)) {
-        return transform(code, file, { ...jsxConfig })
+    async transform(code, id) {
+      const isVueTs = /\.vue\?/.test(id) && id.endsWith('lang=ts')
+      if (tjsxRE.test(id) || isVueTs) {
+        return transform(code, id, { ...jsxConfig, ...(isVueTs ? { loader: 'ts' } : null) })
       }
     },
     async renderChunk(code, chunk) {

@@ -22,7 +22,8 @@ if (argv._[0] === 'build') {
             console.error(chalk.red(`[mvt] Build errored out.`))
             // TODO pretty print this
             // rollup errors contain helpful information
-            console.log(err)
+            console.error(err)
+            process.exit(1)
         })
 } else {
     const server = require('../dist/index').createServer(argv)

@@ -1,7 +1,7 @@
 import path from 'pathe'
 import { resolveAsset, registerAssets } from './buildPluginAsset'
 import { loadPostcssConfig } from './config'
-import { isExternalUrl } from './utils'
+import { isExternalUrl, asyncReplace } from './utils'
 
 import type { Plugin } from 'rollup'
 
@@ -28,31 +28,25 @@ export const createBuildCssPlugin = (
         // and rewrite the url to the resolved public path
         if (urlRE.test(css)) {
           const fileDir = path.dirname(id)
-          urlRE.lastIndex = 0
-          let match
-          let remaining = css
-          let rewritten = ''
-          while ((match = urlRE.exec(remaining))) {
-            rewritten += remaining.slice(0, match.index)
-            const [matched, before, rawUrl, after] = match
-            if (isExternalUrl(rawUrl)) {
-              rewritten += matched
-              remaining = remaining.slice(match.index + matched.length)
-              return
+          css = await asyncReplace(
+            css,
+            urlRE,
+            async ([matched, before, rawUrl, after]) => {
+              if (isExternalUrl(rawUrl)) {
+                return matched
+              }
+              const file = path.join(fileDir, rawUrl)
+              const { fileName, content, url } = await resolveAsset(
+                file,
+                publicBase,
+                assetsDir,
+                inlineLimit
+              )
+              assets.set(fileName, content)
+              debug(`url(${rawUrl}) -> url(${url})`)
+              return `${before}${url}${after}`
             }
-            const file = path.join(fileDir, rawUrl)
-            const { fileName, content, url } = await resolveAsset(
-              file,
-              publicBase,
-              assetsDir,
-              inlineLimit
-            )
-            assets.set(fileName, content)
-            debug(`url(${rawUrl}) -> url(${url})`)
-            rewritten += `${before}${url}${after}`
-            remaining = remaining.slice(match.index + matched.length)
-          }
-          css = rewritten + remaining
+          )
         }
 
         // postcss
@@ -62,14 +56,16 @@ export const createBuildCssPlugin = (
         if (postcssConfig || expectsModule) {
           try {
             const result = await require('postcss')([
-              ...(postcssConfig && postcssConfig.plugins || []),
-              ...(expectsModule ? [
-                require('postcss-modules')({
-                  getJSON(_: string, json: Record<string, string>) {
-                    modules = json
-                  }
-                })
-              ] : [])
+              ...((postcssConfig && postcssConfig.plugins) || []),
+              ...(expectsModule
+                ? [
+                    require('postcss-modules')({
+                      getJSON(_: string, json: Record<string, string>) {
+                        modules = json
+                      }
+                    })
+                  ]
+                : [])
             ]).process(css, {
               ...(postcssConfig && postcssConfig.options),
               from: id
@@ -81,7 +77,9 @@ export const createBuildCssPlugin = (
         }
 
         styles.set(id, css)
-        return modules ? `export default ${JSON.stringify(modules)}` : '/* css extracted by mvt */'
+        return modules
+          ? `export default ${JSON.stringify(modules)}`
+          : '/* css extracted by mvt */'
       }
     },
 

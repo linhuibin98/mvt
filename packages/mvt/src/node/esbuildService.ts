@@ -1,6 +1,7 @@
 import { transform as esbuildTransform, TransformOptions } from 'esbuild'
 
 export const tjsxRE = /\.(tsx?|jsx)$/
+const sourceMapRE = /\/\/# sourceMappingURL.*/
 
 export const transform = async (
   code: string,
@@ -17,7 +18,7 @@ export const transform = async (
     }
 
     return {
-      code: result.code,
+      code: result.code.replace(sourceMapRE, ''),
       map: result.map
     }
   } catch (e) {
@@ -25,7 +26,7 @@ export const transform = async (
     console.error(e)
     return {
       code: '',
-      map: ''
+      map: undefined
     }
   }
 }

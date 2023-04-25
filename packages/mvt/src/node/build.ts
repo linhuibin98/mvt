@@ -4,7 +4,7 @@ import { resolveVue } from './vueResolver'
 import chalk from 'chalk'
 import slash from 'slash'
 import resolve from 'resolve-from'
-import { Resolver, createResolver } from './resolver'
+import { Resolver, createResolver, supportedExts } from './resolver'
 import { createBuildResolvePlugin } from './buildPluginResolve'
 import { createBuildHtmlPlugin } from './buildPluginHtml'
 import { createBuildCssPlugin } from './buildPluginCss'
@@ -188,7 +188,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
       createBuildResolvePlugin(root, cdn, [root, ...srcRoots], resolver),
       // mvt:html
       ...(htmlPlugin ? [htmlPlugin] : []),
-      // vite:esbuild
+      // mvt:esbuild
       await createEsbuildPlugin(minify === 'esbuild', jsx),
       // vue
       require('rollup-plugin-vue')({
@@ -206,7 +206,8 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
       }),
       require('@rollup/plugin-json')(),
       require('@rollup/plugin-node-resolve')({
-        rootDir: root
+        rootDir: root,
+        extensions: supportedExts
       }),
       require('@rollup/plugin-replace')({
         preventAssignment: true,
