@@ -1,4 +1,5 @@
 import { transform as esbuildTransform, TransformOptions } from 'esbuild'
+import path from 'pathe'
 
 export const tjsxRE = /\.(tsx?|jsx)$/
 const sourceMapRE = /\/\/# sourceMappingURL.*/
@@ -8,8 +9,12 @@ export const transform = async (
   file: string,
   options: TransformOptions = {}
 ) => {
+  options = {
+    ...options,
+    loader: options.loader || (path.extname(file).slice(1) as any),
+    sourcemap: true
+  }
   try {
-    options.sourcemap = true
     const result = await esbuildTransform(code, options)
     if (result.warnings.length) {
       console.error(`[mvt] warnings while transforming ${file} with esbuild:`)
@@ -23,6 +28,7 @@ export const transform = async (
     }
   } catch (e) {
     console.error(`[mvt] error while transforming ${file} with esbuild:`)
+    console.error(`options: `, options)
     console.error(e)
     return {
       code: '',
