@@ -13,10 +13,11 @@ A clear and concise description of what the bug is.
 
 ## System Info
 
-- `mvt` version
-- OS (required):
-- Node version (required):
+- **required** `mvt` version:
+- **required** Operating System:
+- **required** Node version:
 - Optional:
+  - npm/yarn version
   - Installed `vue` version (from `yarn.lock` or `package-lock.json`)
   - Installed `@vue/compiler-sfc` version
 
