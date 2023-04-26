@@ -350,7 +350,7 @@ export function rewriteFileWithHMR(
     s.overwrite(e.start!, e.end!, JSON.stringify(depPublicPath))
   }
 
-  const checkAcceptCall = (node: Expression) => {
+  const checkAcceptCall = (node: Expression, isTopLevel = false) => {
     if (
       node.type === 'CallExpression' &&
       node.callee.type === 'MemberExpression' &&
@@ -359,6 +359,15 @@ export function rewriteFileWithHMR(
       node.callee.property.type === 'Identifier' &&
       node.callee.property.name === 'accept'
     ) {
+      if (isTopLevel) {
+        console.warn(
+          chalk.yellow(
+            `[mvt warn] hot.accept() in ${importer} should be wrapped in ` +
+              `\`if (__DEV__) {}\` conditional blocks so that they can be ` +
+              `tree-shaken in production.`
+          )
+        )
+      }
       const args = node.arguments
       // inject the imports's own path so it becomes
       // hot.accept('/foo.js', ['./bar.js'], () => {})
@@ -390,10 +399,10 @@ export function rewriteFileWithHMR(
     }
   }
 
-  const checkStatements = (node: Statement) => {
+  const checkStatements = (node: Statement, isTopLevel = false) => {
     if (node.type === 'ExpressionStatement') {
       // top level hot.accept() call
-      checkAcceptCall(node.expression)
+      checkAcceptCall(node.expression, isTopLevel)
       // __DEV__ && hot.accept()
       if (
         node.expression.type === 'LogicalExpression' &&
@@ -411,7 +420,7 @@ export function rewriteFileWithHMR(
       node.test.name === '__DEV__'
     ) {
       if (node.consequent.type === 'BlockStatement') {
-        node.consequent.body.forEach(checkStatements)
+        node.consequent.body.forEach(s => checkStatements(s))
       }
       if (node.consequent.type === 'ExpressionStatement') {
         checkAcceptCall(node.consequent.expression)
@@ -419,5 +428,5 @@ export function rewriteFileWithHMR(
     }
   }
 
-  ast.forEach(checkStatements)
+  ast.forEach(a => checkStatements(a, true))
 }

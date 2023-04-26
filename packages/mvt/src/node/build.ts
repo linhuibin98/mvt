@@ -211,6 +211,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
       }),
       require('@rollup/plugin-replace')({
         preventAssignment: true,
+        include: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
         values: {
           'process.env.NODE_ENV': '"production"',
           __DEV__: 'false'
