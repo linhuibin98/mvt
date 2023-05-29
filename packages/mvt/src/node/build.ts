@@ -10,6 +10,7 @@ import { createBuildHtmlPlugin } from './buildPluginHtml'
 import { createBuildCssPlugin } from './buildPluginCss'
 import { createBuildAssetPlugin } from './buildPluginAsset'
 import { createEsbuildPlugin } from './buildPluginEsbuild'
+import { createReplacePlugin } from './buildPluginReplace'
 
 import type {
   rollup as Rollup,
@@ -209,13 +210,13 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
         rootDir: root,
         extensions: supportedExts
       }),
-      require('@rollup/plugin-replace')({
-        preventAssignment: true,
-        include: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
-        values: {
-          'process.env.NODE_ENV': '"production"',
-          __DEV__: 'false'
-        }
+      // we use a custom replacement plugin because @rollup/plugin-replace
+      // performs replacements twice, once at transform and once at renderChunk
+      // - which makes it impossible to exclude Vue templates from it since
+      // Vue templates are compiled into js and included in chunks.
+      createReplacePlugin({
+        'process.env.NODE_ENV': '"production"',
+        __DEV__: 'false'
       }),
       // mvt:css
       createBuildCssPlugin(
