@@ -1,3 +1,20 @@
+## [0.11.2](https://github.com/linhuibin98/unbundle/compare/v0.11.1...v0.11.2) (2023-05-29)
+
+
+### Bug Fixes
+
+* avoid mutating esbuild options ([bef2633](https://github.com/linhuibin98/unbundle/commit/bef2633d9fce57743d36444342d6975606f70c24))
+* fix web_modules resolving for build ([a93d678](https://github.com/linhuibin98/unbundle/commit/a93d678067ab945f74bc25bcdf5d8332f3d9839e))
+* skip asset processing for data uri in css ([5005926](https://github.com/linhuibin98/unbundle/commit/5005926eefd94d3d72f82a81f4171be9f1351368))
+* warn non wrapped hot.accept calls ([7ba2992](https://github.com/linhuibin98/unbundle/commit/7ba29928db25d3198dbf30906b1f8c9507ae49af))
+
+
+### Features
+
+* support --open flag ([2121312](https://github.com/linhuibin98/unbundle/commit/2121312d007d6da4c0b7db5ecda4e8da08507501))
+
+
+
 ## [0.11.1](https://github.com/linhuibin98/unbundle/compare/v0.11.0...v0.11.1) (2023-04-25)
 
 
