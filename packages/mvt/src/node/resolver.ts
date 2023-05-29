@@ -1,7 +1,7 @@
 import path from 'pathe'
 import slash from 'slash'
 import { statSync } from 'fs'
-import { cleanUrl } from './utils'
+import { cleanUrl } from './utils/index'
 
 export interface Resolver {
   requestToFile(publicPath: string, root: string): string | undefined

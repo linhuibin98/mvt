@@ -1,8 +1,8 @@
 import { normalizePath } from '@rollup/pluginutils'
 import path from 'pathe'
 import fs from 'fs-extra'
-import { isExternalUrl, cleanUrl, isStaticAsset } from './utils'
-import { resolveVue } from './vueResolver'
+import { isExternalUrl, cleanUrl, isStaticAsset } from '../utils/index'
+import { resolveVue } from '../utils/resolveVue'
 import { resolveAsset } from './buildPluginAsset'
 import {
   parse,
@@ -13,7 +13,7 @@ import {
   AttributeNode
 } from '@vue/compiler-dom'
 import MagicString from 'magic-string'
-import { InternalResolver } from './resolver'
+import { InternalResolver } from '../resolver'
 
 import type { Plugin, RollupOutput } from 'rollup'
 

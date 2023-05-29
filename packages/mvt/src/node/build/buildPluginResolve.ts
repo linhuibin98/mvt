@@ -1,9 +1,9 @@
-import { resolveVue } from './vueResolver'
-import { hmrClientId } from './serverPluginHmr'
-import { resolveWebModule } from './serverPluginModuleResolve'
+import { resolveVue } from '../utils/resolveVue'
+import { hmrClientId } from '../server/serverPluginHmr'
+import { resolveWebModule } from '../server/serverPluginModuleResolve'
 
 import type { Plugin } from 'rollup'
-import type { InternalResolver } from './resolver'
+import type { InternalResolver } from '../resolver'
 
 const debug = require('debug')('mvt:build:resolve')
 

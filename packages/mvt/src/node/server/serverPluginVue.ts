@@ -5,17 +5,17 @@ import {
   SFCStyleBlock,
   SFCStyleCompileResults
 } from '@vue/compiler-sfc'
-import { resolveCompiler } from './vueResolver'
+import { resolveCompiler } from '../utils/resolveVue'
 import hash from 'hash-sum'
-import { cachedRead, genSourceMapString } from './utils'
+import { cachedRead, genSourceMapString } from '../utils/index'
 import LRUCache from 'lru-cache'
 import { hmrClientId } from './serverPluginHmr'
 import resolve from 'resolve-from'
-import { loadPostcssConfig } from './config'
-import { transform } from './esbuildService'
+import { loadPostcssConfig } from '../utils/resolvePostCssConfig'
+import { transform } from '../esbuildService'
 
 import type { Context } from 'koa'
-import type { Plugin } from './server'
+import type { Plugin } from './index'
 
 const debug = require('debug')('mvt:sfc')
 const getEtag = require('etag')

@@ -1,4 +1,4 @@
-import { tjsxRE, transform } from './esbuildService'
+import { tjsxRE, transform } from '../esbuildService'
 
 import type { Plugin } from 'rollup'
 

@@ -2,9 +2,9 @@ import path from 'pathe'
 import chalk from 'chalk'
 import resolve from 'resolve-from'
 import fs from 'fs-extra'
-import { Plugin } from './server'
-import { resolveVue } from './vueResolver'
-import { cachedRead } from './utils'
+import { Plugin } from './index'
+import { resolveVue } from '../utils/resolveVue'
+import { cachedRead } from '../utils/fsUtils'
 import slash from 'slash'
 
 const debug = require('debug')('mvt:resolve')

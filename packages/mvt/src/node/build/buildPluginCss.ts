@@ -1,7 +1,7 @@
 import path from 'pathe'
 import { resolveAsset, registerAssets } from './buildPluginAsset'
-import { loadPostcssConfig } from './config'
-import { isExternalUrl, asyncReplace } from './utils'
+import { loadPostcssConfig } from '../utils/resolvePostCssConfig'
+import { isExternalUrl, asyncReplace } from '../utils/index'
 
 import type { Plugin } from 'rollup'
 

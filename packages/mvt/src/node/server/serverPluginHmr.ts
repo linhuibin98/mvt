@@ -33,7 +33,7 @@ import path from 'pathe'
 import hash from 'hash-sum'
 import chalk from 'chalk'
 import { parseSFC, vueCache } from './serverPluginVue'
-import { cachedRead } from './utils'
+import { cachedRead } from '../utils/fsUtils'
 import { normalizePath } from '@rollup/pluginutils'
 import MagicString from 'magic-string'
 import { parse } from '@babel/parser'
@@ -42,7 +42,7 @@ import slash from 'slash'
 import type { StringLiteral, Statement, Expression } from '@babel/types'
 import type { SFCBlock } from '@vue/compiler-sfc'
 import type { FSWatcher } from 'chokidar'
-import type { Plugin } from './server'
+import type { Plugin } from './index'
 
 export const debugHmr = require('debug')('mvt:hmr')
 
@@ -61,7 +61,7 @@ export const importerMap: HMRStateMap = new Map()
 export const importeeMap: HMRStateMap = new Map()
 
 // client and node files are placed flat in the dist folder
-export const hmrClientFilePath = path.resolve(__dirname, './client.js')
+export const hmrClientFilePath = path.resolve(__dirname, '../client.js')
 export const hmrClientId = '@hmr'
 export const hmrClientPublicPath = `/${hmrClientId}`
 

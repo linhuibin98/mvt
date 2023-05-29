@@ -1,6 +1,6 @@
-import { readBody, isImportRequest } from './utils'
+import { readBody, isImportRequest } from '../utils/index'
 
-import type { Plugin } from './server'
+import type { Plugin } from './index'
 
 export const jsonPlugin: Plugin = ({ app, watcher }) => {
   app.use(async (ctx, next) => {

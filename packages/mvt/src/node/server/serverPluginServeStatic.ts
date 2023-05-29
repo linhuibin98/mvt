@@ -1,4 +1,4 @@
-import type { Plugin } from './server'
+import type { Plugin } from './index'
 
 const send = require('koa-send')
 const debug = require('debug')('mvt:history')

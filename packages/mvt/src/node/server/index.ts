@@ -1,7 +1,7 @@
 import http, { Server } from 'http'
 import Koa from 'koa'
 import chokidar from 'chokidar'
-import { createResolver } from './resolver'
+import { createResolver } from '../resolver'
 
 import { hmrPlugin, HMRWatcher } from './serverPluginHmr'
 import { moduleRewritePlugin } from './serverPluginModuleRewrite'
@@ -12,7 +12,7 @@ import { jsonPlugin } from './serverPluginJson'
 import { cssPlugin } from './serverPluginCss'
 import { esbuildPlugin } from './serverPluginEsbuild'
 
-import type { Resolver, InternalResolver } from './resolver'
+import type { Resolver, InternalResolver } from '../resolver'
 import slash from 'slash'
 
 export { Resolver }

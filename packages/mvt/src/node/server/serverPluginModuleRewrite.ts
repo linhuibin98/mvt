@@ -12,10 +12,10 @@ import {
   rewriteFileWithHMR,
   hmrClientPublicPath
 } from './serverPluginHmr'
-import { readBody, cleanUrl, queryRE, isExternalUrl } from './utils'
+import { readBody, cleanUrl, queryRE, isExternalUrl } from '../utils/index'
 
-import type { InternalResolver } from './resolver'
-import type { Plugin } from './server'
+import type { InternalResolver } from '../resolver'
+import type { Plugin } from './index'
 
 const debug = require('debug')('mvt:rewrite')
 const rewriteCache = new LRUCache({ max: 1024 })

@@ -1,6 +1,6 @@
 import path from 'pathe'
 import fs from 'fs-extra'
-import { isStaticAsset } from './utils'
+import { isStaticAsset } from '../utils/index'
 import hash from 'hash-sum'
 import slash from 'slash'
 import mime from 'mime-types'

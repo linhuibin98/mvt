@@ -1,9 +1,9 @@
-import { isImportRequest, readBody } from './utils'
+import { isImportRequest, readBody } from '../utils/index'
 import { hmrClientId } from './serverPluginHmr'
 import hash from 'hash-sum'
-import { loadPostcssConfig } from './config'
+import { loadPostcssConfig } from '../utils/resolvePostCssConfig'
 
-import type { Plugin } from './server'
+import type { Plugin } from './index'
 import type { Context } from 'koa'
 
 interface ProcessedEntry {
