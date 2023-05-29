@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "npm run debug && mvt --jsx-factory=h",
+    "dev": "npm run debug && mvt --jsx-factory=h --open",
     "build": "npm run debug && mvt build --jsx-factory=h",
     "debug": "cross-env DEBUG=mvt:*",
     "serve": "serve dist"
