@@ -167,7 +167,7 @@ You can run `mvt build` to bundle the app.
 
 - `mvt build --cdn`: import `vue` from a CDN link in the built js. This will make the build faster, but overall the page payload will be larger because therer will be no tree-shaking for Vue APIs.
 
-Internally, we use a highly opinionated Rollup config to generate the build. The build is configurable by passing on most options to Rollup - and most non-rollup string/boolean options have mapping flags in the CLI (see [src/node/build.ts](https://github.com/vuejs/mvt/blob/master/src/node/build.ts) for full details).
+Internally, we use a highly opinionated Rollup config to generate the build. The build is configurable by passing on most options to Rollup - and most non-rollup string/boolean options have mapping flags in the CLI (see [build/index.ts](https://github.com/vuejs/mvt/blob/master/src/node/build/index.ts) for full details).
 
 ### API
 
@@ -212,6 +212,8 @@ createServer({
 ```
 
 #### Build
+
+Check out the full options interface in [build/index.ts](https://github.com/linhuibin98/unbundle/blob/main/packages/mvt/src/node/build/index.ts).
 
 ```js
 const { build } = require('@unbundle/mvt')
