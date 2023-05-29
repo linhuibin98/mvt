@@ -14,6 +14,7 @@
   <TestPreprocessors />
   <TestAssets />
   <TestJsonImport />
+  <TestTs />
   <TestJsx />
   <h2>Async Component</h2>
   <TestAsync />
@@ -29,6 +30,7 @@ import TestCssModules from './TestCssModules.vue'
 import TestPreprocessors from './TestPreprocessors.vue'
 import TestAssets from './TestAssets.vue'
 import TestJsonImport from './TestJsonImport.vue'
+import TestTs from './ts/TestTs.vue'
 import TestJsx from './TestJsx.vue'
 
 export default {
@@ -41,6 +43,7 @@ export default {
     TestPreprocessors,
     TestAssets,
     TestJsonImport,
+    TestTs,
     TestJsx,
     TestAsync: defineAsyncComponent(() => import('./TestAsync.vue'))
   },
