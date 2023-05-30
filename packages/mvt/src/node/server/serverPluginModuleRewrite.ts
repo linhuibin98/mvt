@@ -12,7 +12,7 @@ import {
   rewriteFileWithHMR,
   hmrClientPublicPath
 } from './serverPluginHmr'
-import { readBody, cleanUrl, queryRE, isExternalUrl } from '../utils/index'
+import { readBody, cleanUrl, isExternalUrl, resolveRelativeRequest } from '../utils/index'
 
 import type { InternalResolver } from '../resolver'
 import type { Plugin } from './index'
@@ -171,11 +171,8 @@ function rewriteImports(
               hasReplaced = true
             }
           } else {
-            let pathname = cleanUrl(
-              slash(path.resolve(path.dirname(importer), id))
-            )
-            const queryMatch = id.match(queryRE)
-            let query = queryMatch ? queryMatch[0] : ''
+            let {pathname, query} = resolveRelativeRequest(importer, id);
+
             // append .js or .ts for extension-less imports
             // for now we don't attemp to resolve other extensions
             if (!/\.\w+/.test(pathname)) {
