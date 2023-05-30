@@ -1,7 +1,7 @@
-import { isImportRequest, readBody } from '../utils/index'
+import { isImportRequest, readBody, loadPostcssConfig } from '../utils/index'
 import { hmrClientId } from './serverPluginHmr'
 import hash from 'hash-sum'
-import { loadPostcssConfig } from '../utils/resolvePostCssConfig'
+import { styleSrcImportMap } from './serverPluginVue'
 
 import type { Plugin } from './index'
 import type { Context } from 'koa'
@@ -57,15 +57,18 @@ export const cssPlugin: Plugin = ({ root, app, watcher, resolver }) => {
   // handle hmr
   watcher.on('change', (file) => {
     if (file.endsWith('.css')) {
+      if (styleSrcImportMap.has(file)) {
+        // this is a vue src import
+        return
+      }
+
       const publicPath = resolver.fileToRequest(file)
       const id = hash(publicPath)
 
       // bust process cache
       processedCSS.delete(publicPath)
 
-      if (file.endsWith('.module.css')) {
-        watcher.handleJSReload(file)
-      } else {
+      if (!file.endsWith('.module.css')) {
         watcher.send({
           type: 'style-update',
           id,

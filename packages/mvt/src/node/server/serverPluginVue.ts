@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import path from 'pathe'
 import {
+  SFCBlock,
   SFCDescriptor,
   SFCTemplateBlock,
   SFCStyleBlock,
@@ -8,18 +9,31 @@ import {
 } from '@vue/compiler-sfc'
 import { resolveCompiler } from '../utils/resolveVue'
 import hash from 'hash-sum'
-import { cachedRead, genSourceMapString } from '../utils/index'
 import LRUCache from 'lru-cache'
-import { hmrClientId } from './serverPluginHmr'
+import {
+  hmrClientId,
+  debugHmr,
+  importerMap,
+  ensureMapEntry
+} from './serverPluginHmr'
 import resolve from 'resolve-from'
-import { loadPostcssConfig } from '../utils/resolvePostCssConfig'
+import {
+  cachedRead,
+  genSourceMapString,
+  loadPostcssConfig,
+  cleanUrl
+} from '../utils/index'
 import { transform } from '../esbuildService'
-
+import { InternalResolver } from '../resolver'
+import slash from 'slash'
+import qs from 'querystring'
 import type { Context } from 'koa'
 import type { Plugin } from './index'
 
 const debug = require('debug')('mvt:sfc')
 const getEtag = require('etag')
+
+export const styleSrcImportMap = new Map()
 
 interface CacheEntry {
   descriptor?: SFCDescriptor
@@ -44,7 +58,7 @@ const etagCacheCheck = (ctx: Context) => {
 // Resolve the correct `vue` and `@vue.compiler-sfc` to use.
 // If the user project has local installations of these, they should be used;
 // otherwise, fallback to the dependency of mvt itself.
-export const vuePlugin: Plugin = ({ root, app, resolver }) => {
+export const vuePlugin: Plugin = ({ root, app, resolver, watcher }) => {
   app.use(async (ctx, next) => {
     if (!ctx.path.endsWith('.vue') && !ctx.vue) {
       return next()
@@ -52,10 +66,10 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
 
     const query = ctx.query
     const publicPath = ctx.path
-    const filePath = resolver.requestToFile(publicPath)
+    let filename = resolver.requestToFile(publicPath)
 
     // upstream plugins could've already read the file
-    const descriptor = await parseSFC(root, filePath, ctx.body)
+    const descriptor = await parseSFC(root, filename, ctx.body)
 
     if (!descriptor) {
       debug(`${ctx.url} - 404`)
@@ -64,17 +78,24 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     }
 
     if (!query.type) {
+      if (descriptor.script && descriptor.script.src) {
+        filename = await resolveSrcImport(descriptor.script, ctx, resolver)
+      }
       ctx.type = 'js'
-      ctx.body = await compileSFCMain(descriptor, filePath, publicPath)
+      ctx.body = await compileSFCMain(descriptor, filename, publicPath)
       return etagCacheCheck(ctx)
     }
 
     if (query.type === 'template') {
+      const templateBlock = descriptor.template!
+      if (templateBlock.src) {
+        filename = await resolveSrcImport(templateBlock, ctx, resolver)
+      }
       ctx.type = 'js'
       ctx.body = compileSFCTemplate(
         root,
-        descriptor.template!,
-        filePath,
+        templateBlock,
+        filename,
         publicPath,
         descriptor.styles.some((s) => s.scoped)
       )
@@ -84,11 +105,15 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
     if (query.type === 'style') {
       const index = Number(query.index)
       const styleBlock = descriptor.styles[index]
+      if (styleBlock.src) {
+        filename = await resolveSrcImport(styleBlock, ctx, resolver)
+        styleSrcImportMap.set(filename, ctx.url)
+      }
       const result = await compileSFCStyle(
         root,
         styleBlock,
         index,
-        filePath,
+        filename,
         publicPath
       )
       if (query.module != null) {
@@ -103,6 +128,41 @@ export const vuePlugin: Plugin = ({ root, app, resolver }) => {
 
     // TODO custom blocks
   })
+
+  // handle HMR for <style src="xxx.css">
+  // it cannot be handled as simple css import because it may be scoped
+  watcher.on('change', (file) => {
+    const styleImport = styleSrcImportMap.get(file)
+    if (styleImport) {
+      vueCache.delete(file)
+      const publicPath = cleanUrl(styleImport)
+      const index = qs.parse(styleImport.split('?', 2)[1]).index
+      watcher.send({
+        type: 'vue-style-update',
+        path: publicPath,
+        index: Number(index),
+        id: `${hash(publicPath)}-${index}`,
+        timestamp: Date.now()
+      })
+    }
+  })
+}
+
+async function resolveSrcImport(
+  block: SFCBlock,
+  ctx: Context,
+  resolver: InternalResolver
+) {
+  const importer = ctx.path
+  const importee = slash(path.resolve(path.dirname(importer), block.src!))
+  const filename = resolver.requestToFile(importee)
+  await cachedRead(ctx, filename)
+  block.content = ctx.body as string
+
+  // register HMR import relationship
+  debugHmr(`        ${importer} imports ${importee}`)
+  ensureMapEntry(importerMap, importee).add(ctx.path)
+  return filename
 }
 
 export async function parseSFC(
