@@ -55,7 +55,6 @@
     "@rollup/pluginutils": "^5.0.2",
     "@vue/compiler-dom": "^3.2.47",
     "@vue/compiler-sfc": "^3.2.47",
-    "@vue/shared": "^3.3.4",
     "chalk": "^4",
     "chokidar": "^3.5.3",
     "cssnano": "^6.0.0",

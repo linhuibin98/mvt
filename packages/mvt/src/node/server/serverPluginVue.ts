@@ -1,3 +1,4 @@
+import chalk from 'chalk'
 import path from 'pathe'
 import {
   SFCDescriptor,
@@ -134,10 +135,23 @@ export async function parseSFC(
   })
 
   if (errors.length) {
+    console.error(chalk.red(`\n[mvt] SFC parse error: `))
     errors.forEach((e) => {
-      console.error(`[mvt] SFC parse error: `, e)
+      // console.error(
+      //   chalk.underline(
+      //     `${filename}:${e.loc!.start.line}:${e.loc!.start.column}`
+      //   )
+      // )
+      console.error(chalk.yellow(e.message))
+      console.error(e.stack)
+      // console.error(
+      //   generateCodeFrame(
+      //     content as string,
+      //     e.loc!.start.offset,
+      //     e.loc!.end.offset
+      //   )
+      // )
     })
-    console.error(`source:\n`, content)
   }
 
   cached = cached || { styles: [] }

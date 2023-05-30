@@ -8,7 +8,7 @@ const mediaRE = /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/
 const fontsRE = /\.(woff2?|eot|ttf|otf)(\?.*)?$/i
 
 /**
- * Check if a file is a static asset that vite can process.
+ * Check if a file is a static asset that mvt can process.
  */
 export const isStaticAsset = (file: string) => {
   return imageRE.test(file) || mediaRE.test(file) || fontsRE.test(file)

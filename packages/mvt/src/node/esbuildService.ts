@@ -1,7 +1,7 @@
 import { transform as esbuildTransform, TransformOptions, Message } from 'esbuild'
 import path from 'pathe'
 import chalk from 'chalk'
-import { generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame } from '@vue/compiler-sfc'
 
 const debug = require('debug')('mvt:esbuild')
 
@@ -31,7 +31,7 @@ export const transform = async (
     }
   } catch (e) {
     console.error(
-      chalk.red(`[vite] error while transforming ${file} with esbuild:`)
+      chalk.red(`[mvt] error while transforming ${file} with esbuild:`)
     )
     e.errors.forEach((m: Message) => printMessage(m, code))
     debug(`options used: `, options)
