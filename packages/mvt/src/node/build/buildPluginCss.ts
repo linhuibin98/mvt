@@ -81,9 +81,12 @@ export const createBuildCssPlugin = (
         }
 
         styles.set(id, css)
-        return modules
-          ? `export default ${JSON.stringify(modules)}`
-          : '/* css extracted by mvt */'
+        return {
+          code: modules
+            ? `export default ${JSON.stringify(modules)}`
+            : '/* css extracted by mvt */',
+          map: null
+        }
       }
     },
 
