@@ -1,3 +1,30 @@
+## [0.11.4](https://github.com/linhuibin98/unbundle/compare/v0.11.1...v0.11.4) (2023-05-31)
+
+
+### Bug Fixes
+
+* avoid mutating esbuild options ([bef2633](https://github.com/linhuibin98/unbundle/commit/bef2633d9fce57743d36444342d6975606f70c24))
+* avoid spinner in tests ([2f257f1](https://github.com/linhuibin98/unbundle/commit/2f257f1868c0c39048b2658665ead510eff1f54b))
+* fix module rewrite resolution with base paths ([fb89c32](https://github.com/linhuibin98/unbundle/commit/fb89c3296539c754d27e29c4aead5701acbe31c5))
+* fix web_modules resolving for build ([a93d678](https://github.com/linhuibin98/unbundle/commit/a93d678067ab945f74bc25bcdf5d8332f3d9839e))
+* fix windows path resolution ([c9eabb9](https://github.com/linhuibin98/unbundle/commit/c9eabb95174fc4dfcfdbc056a390457bcb949560))
+* skip asset processing for data uri in css ([5005926](https://github.com/linhuibin98/unbundle/commit/5005926eefd94d3d72f82a81f4171be9f1351368))
+* support directory index resolving ([e15972b](https://github.com/linhuibin98/unbundle/commit/e15972bd0d5a99c3e62b918215c35d7f44662d1e))
+* use esm-bundler build of vue ([6cc4c10](https://github.com/linhuibin98/unbundle/commit/6cc4c101f0653d0952c20070e6b07c0c55aa08bb))
+* warn non wrapped hot.accept calls ([7ba2992](https://github.com/linhuibin98/unbundle/commit/7ba29928db25d3198dbf30906b1f8c9507ae49af))
+
+
+### Features
+
+* **create-vite-app:** use valid html file ([c1b5f54](https://github.com/linhuibin98/unbundle/commit/c1b5f54e304f0765af90a7fc4281d3f265011144))
+* improve build error output ([db8083f](https://github.com/linhuibin98/unbundle/commit/db8083f1d12b9ddf93531263d7bec8abd8d40972))
+* improve sfc compilation error output ([6a25ca6](https://github.com/linhuibin98/unbundle/commit/6a25ca67664944383279e37ef2eeb7a616884f9a))
+* src import support ([eace0fb](https://github.com/linhuibin98/unbundle/commit/eace0fb556c86090a666d02ffe6bf922169614ad))
+* support --open flag ([2121312](https://github.com/linhuibin98/unbundle/commit/2121312d007d6da4c0b7db5ecda4e8da08507501))
+* support build sourcemap ([5e4b477](https://github.com/linhuibin98/unbundle/commit/5e4b47793612209f009390acc88314e5cb05953e))
+
+
+
 ## [0.11.3](https://github.com/linhuibin98/unbundle/compare/v0.11.1...v0.11.3) (2023-05-29)
 
 
