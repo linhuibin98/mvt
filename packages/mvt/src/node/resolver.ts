@@ -31,7 +31,6 @@ export const supportedExts = ['.js', '.ts', '.jsx', '.tsx', '.json']
 export const resolveExt = (id: string) => {
   const cleanId = cleanUrl(id)
   if (!/\.\w+$/.test(cleanId)) {
-    const expectsIndex = id[id.length - 1] === '/'
     let inferredExt = ''
     for (const ext of supportedExts) {
       try {
