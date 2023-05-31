@@ -4,11 +4,10 @@ import sfcCompiler from '@vue/compiler-sfc'
 import chalk from 'chalk'
 
 interface ResolvedVuePaths {
-  browser: string
-  bundler: string
-  version: string
-  hasLocalVue: boolean
+  runtime: string
   compiler: string
+  version: string
+  isLocal: boolean
   cdnLink: string
 }
 
@@ -21,22 +20,17 @@ export function resolveVue(root: string): ResolvedVuePaths {
   if (resolved) {
     return resolved
   }
-  let browserPath: string
-  let bundlerPath: string
+  let runtimePath: string
   let compilerPath: string
-  let hasLocalVue = true
+  let isLocal = true
   let vueVersion: string
   try {
     // see if user has local vue installation
     const userVuePkg = resolve(root, 'vue/package.json')
     vueVersion = require(userVuePkg).version
-    browserPath = path.join(
+    runtimePath = path.join(
       path.dirname(userVuePkg),
       'dist/vue.runtime.esm-browser.js'
-    )
-    bundlerPath = path.join(
-      path.dirname(userVuePkg),
-      'dist/vue.runtime.esm-bundler.js'
     )
     // also resolve matching sfc compiler
     try {
@@ -47,7 +41,6 @@ export function resolveVue(root: string): ResolvedVuePaths {
       }
       compilerPath = path.join(path.dirname(compilerPkgPath), compilerPkg.main)
     } catch (e) {
-      hasLocalVue = false
       // user has local vue but has no compiler-sfc
       console.error(
         chalk.red(
@@ -59,19 +52,18 @@ export function resolveVue(root: string): ResolvedVuePaths {
       compilerPath = require.resolve('@vue/compiler-sfc')
     }
   } catch (e) {
+    isLocal = false
     // user has no local vue, use mvt's dependency version
-    browserPath = require.resolve('vue/dist/vue.runtime.esm-browser.js')
-    bundlerPath = require.resolve('vue/dist/vue.runtime.esm-bundler.js')
+    runtimePath = require.resolve('vue/dist/vue.runtime.esm-bundler.js')
     vueVersion = require('vue/package.json').version
     compilerPath = require.resolve('@vue/compiler-sfc')
   }
 
   resolved = {
-    browser: browserPath,
-    bundler: bundlerPath,
     version: vueVersion,
-    hasLocalVue,
+    runtime: runtimePath,
     compiler: compilerPath,
+    isLocal,
     cdnLink: `https://unpkg.com/vue@${vueVersion}/dist/vue.esm-browser.prod.js`
   }
 
